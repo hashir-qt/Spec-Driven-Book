@@ -11,32 +11,38 @@ type FeatureItem = {
 
 const FeatureList: FeatureItem[] = [
   {
-    title: 'Easy to Use',
+    title: 'Module 1: ROS 2 Fundamentals',
     Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
     description: (
       <>
-        Docusaurus was designed from the ground up to be easily installed and
-        used to get your website up and running quickly.
+        Learn the core concepts of the Robot Operating System 2 (ROS 2), the foundational software stack for modern robotics.
       </>
     ),
   },
   {
-    title: 'Focus on What Matters',
+    title: 'Module 2: Gazebo Simulation',
     Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
     description: (
       <>
-        Docusaurus lets you focus on your docs, and we&apos;ll do the chores. Go
-        ahead and move your docs into the <code>docs</code> directory.
+        Dive into the world of simulation with Gazebo. Learn how to build virtual worlds and test your robot's behavior.
       </>
     ),
   },
   {
-    title: 'Powered by React',
+    title: 'Module 3: NVIDIA Isaac Sim',
     Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
     description: (
       <>
-        Extend or customize your website layout by reusing React. Docusaurus can
-        be extended while reusing the same header and footer.
+        Explore the cutting-edge of AI-powered robotics simulation with NVIDIA Isaac Sim, a photorealistic, physics-based virtual environment.
+      </>
+    ),
+  },
+  {
+    title: 'Module 4: Vision-Language-Action',
+    Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
+    description: (
+      <>
+        Learn how to create robots that can understand and respond to natural language commands using Whisper and Large Language Models.
       </>
     ),
   },
@@ -44,7 +50,7 @@ const FeatureList: FeatureItem[] = [
 
 function Feature({title, Svg, description}: FeatureItem) {
   return (
-    <div className={clsx('col col--4')}>
+    <div className={clsx('col col--3')}>
       <div className="text--center">
         <Svg className={styles.featureSvg} role="img" />
       </div>
