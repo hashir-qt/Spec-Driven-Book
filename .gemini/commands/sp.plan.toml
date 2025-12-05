@@ -21,11 +21,11 @@ Frontend (Docusaurus)
         │   ├── API Layer (Routes, validation)
         │   ├── Service Layer (Business logic)
         │   ├── Repository Layer (Data access)
-        │   └── External Services (OpenAI, Qdrant)
+        │   └── External Services (OpenAI Agents SDK, Qdrant for RAG)
         │
         ├─→ Neon Postgres (User data, preferences, chat history)
-        ├─→ Qdrant Vector DB (Chapter embeddings)
-        └─→ OpenAI API (Embeddings, chat completions)
+        ├─→ Qdrant Vector DB (RAG Embeddings)
+        └─→ GEMINI API (flash-2.5) (Embeddings, chat completions)
 ```
 
 ### Technology Stack Decisions
@@ -40,7 +40,7 @@ Frontend (Docusaurus)
 - **Rationale**: Async support (critical for OpenAI API calls), auto-generated OpenAPI docs, better type hints
 - **Tradeoff**: Less built-in auth (mitigated by Better-auth), but more flexible
 
-**Decision 3: Qdrant vs Pinecone vs Weaviate**
+**Decision 3: Qdrant vs Pinecone vs Weaviate (for RAG)**
 - **Choice**: Qdrant Cloud Free Tier
 - **Rationale**: 1GB free storage, excellent Python SDK, open-source (can self-host if needed)
 - **Tradeoff**: Smaller free tier than Pinecone (1GB vs 1M vectors), but sufficient for book content
@@ -156,7 +156,7 @@ Frontend (Docusaurus)
 1. Write script `scripts/seed_vector_db.py`:
    - Parse MDX files (extract text, ignore frontmatter)
    - Chunk text (500-1000 tokens per chunk)
-   - Generate embeddings (OpenAI text-embedding-3-small)
+   - Generate embeddings (gemini-embedding-001)
    - Upload to Qdrant collection `book_chapters_en`
 2. Implement vector search service:
    - Query Qdrant by embedding vector
@@ -168,7 +168,7 @@ Frontend (Docusaurus)
    - Add selected text context (if provided)
    - Truncate to 6000 tokens max
 4. Implement RAG engine:
-   - Orchestrate: embed query → search → build context → call OpenAI
+   - Orchestrate: embed query → search → build context → call OpenAI Agents SDK for chat completion
    - Handle errors (API limits, no results found)
 5. Create API endpoint:
    - Validate request (Pydantic schema)
@@ -322,7 +322,7 @@ frontend/src/
    - Rules: Keep core facts, adjust examples/explanations
 2. Implement personalization service:
    - Query user_preferences table
-   - Call OpenAI GPT-4 with personalization prompt
+   - Call OpenAI Agents SDK with personalization prompt
    - Cache personalized content (avoid re-processing)
 3. Create API endpoint POST /api/v1/personalize:
    - Requires authentication
@@ -381,7 +381,7 @@ Output: Adapted markdown
    - Output: Urdu markdown
    - Rules: Keep technical terms in English, maintain formatting
 2. Implement translation service:
-   - Call OpenAI GPT-4 with translation prompt
+   - Call OpenAI Agents SDK with translation prompt
    - Cache translations (avoid re-translating)
 3. Create API endpoint POST /api/v1/translate:
    - Input: chapter_id, target_language ("ur")

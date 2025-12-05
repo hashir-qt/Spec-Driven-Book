@@ -281,8 +281,8 @@ Format: MDX (Docusaurus)
   - Read all MDX files from frontend/docs/
   - Parse content (remove frontmatter)
   - Chunk text (500-1000 tokens per chunk)
-  - Generate embeddings (OpenAI text-embedding-3-small)
-  - Upload to Qdrant collection `book_chapters_en`
+  - Generate embeddings (gemini-embedding-001)
+  - Upload to Qdrant collection `book_chapters_en` for RAG
 
 **Acceptance Criteria**:
 - Script runs successfully
@@ -352,8 +352,7 @@ python backend/scripts/seed_vector_db.py
   - Generate query embedding
   - Search vector DB
   - Build context
-  - Call OpenAI GPT-4
-  - Return answer + sources
+  - Call OpenAI Agents SDK for chat completion
 
 **Acceptance Criteria**:
 - Full pipeline works end-to-end
@@ -591,7 +590,7 @@ curl -X POST http://localhost:8000/api/v1/chat \
 - Create `backend/app/services/personalization_service.py`
 - Method: `personalize_content(chapter_content, user_background, level)`
 - Logic:
-  - Call OpenAI GPT-4 with personalization prompt
+  - Call OpenAI Agents SDK with personalization prompt
   - Return adapted markdown
 
 **Acceptance Criteria**:
@@ -662,7 +661,7 @@ curl -X POST http://localhost:8000/api/v1/chat \
 - Create `backend/app/services/translation_service.py`
 - Method: `translate_content(chapter_content, target_language)`
 - Logic:
-  - Call OpenAI GPT-4 with translation prompt
+  - Call OpenAI Agents SDK with translation prompt
   - Return translated markdown
 
 **Acceptance Criteria**:

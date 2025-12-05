@@ -61,6 +61,8 @@ Both must meet professional production standards suitable for academic and indus
 - Prompts are specific, well-structured, and include success criteria
 - AI-generated code always reviewed for correctness and security
 
+- AI Framework: OpenAI Agents SDK / ChatKit + GEMINI API (flash-2.5)
+
 **Rationale**: This project demonstrates AI-native development. Use AI tools properly or don't use them.
 
 ---

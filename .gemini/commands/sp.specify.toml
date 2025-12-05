@@ -41,10 +41,10 @@ Build a **complete educational platform** consisting of:
 - Works without authentication (guest mode)
 - Handles selected-text queries (user highlights → asks question)
 
-**SD-3: Vector Database Populated**
+**SD-3: Vector Database Populated (for RAG)**
 - All chapter content embedded and stored in Qdrant
 - Semantic search returns relevant results (relevance score > 0.6)
-- Embeddings use OpenAI text-embedding-3-small
+- Embeddings use gemini-embedding-001
 
 **SD-4: Backend API Operational**
 - FastAPI backend deployed and accessible
@@ -98,9 +98,9 @@ Build a **complete educational platform** consisting of:
 - Frontend: Docusaurus 3.x + React 18 + TypeScript
 - Backend: FastAPI (Python 3.12+)
 - Database: Neon Serverless Postgres
-- Vector DB: Qdrant Cloud Free Tier (1GB limit)
+- Vector DB: Qdrant Cloud Free Tier (1GB limit for RAG)
 - Auth: Better-auth library
-- AI: OpenAI API (GPT-4 + text-embedding-3-small)
+- AI: OpenAI Agents SDK / ChatKit + GEMINI API (flash-2.5)
 
 **TC-2: Deployment Targets**
 - Frontend: GitHub Pages or Vercel
@@ -363,7 +363,7 @@ Build a **complete educational platform** consisting of:
 ### Vector Database (Qdrant)
 
 **Collection: book_chapters_en**
-- Vectors: 1536 dimensions (OpenAI text-embedding-3-small)
+- Vectors: 3072 dimensions (gemini-embedding-001)
 - Distance: Cosine similarity
 - Payload:
   - chapter_id (string)
@@ -383,16 +383,16 @@ Build a **complete educational platform** consisting of:
 
 ### External Services
 
-1. **OpenAI API**
+1. **GEMINI API (flash-2.5)**
    - Purpose: Embeddings + chat completions
-   - Models: text-embedding-3-small, gpt-4-turbo
+   - Models: gemini-embedding-001, flash-2.5
    - Fallback: None (critical dependency)
 
 2. **Neon Serverless Postgres**
    - Purpose: User data, preferences, chat history
    - Fallback: Local Postgres for development
 
-3. **Qdrant Cloud**
+3. **Qdrant Cloud (for RAG)**
    - Purpose: Vector embeddings storage
    - Fallback: Local Qdrant instance for development
 
@@ -403,8 +403,8 @@ Build a **complete educational platform** consisting of:
 ### Internal Dependencies
 
 - **Frontend depends on Backend**: Chatbot, auth, personalization all require API
-- **Backend depends on Qdrant**: RAG pipeline requires vector search
-- **Backend depends on OpenAI**: Embeddings and chat completions critical
+- Backend depends on Qdrant (for RAG): RAG pipeline requires vector search
+- Backend depends on GEMINI API: Embeddings and chat completions critical
 - **Backend depends on Neon**: User data persistence required for auth
 
 ---

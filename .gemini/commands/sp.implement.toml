@@ -189,7 +189,7 @@ npm start
 
 ### Validation Steps
 
-#### 3.1 Vector Database Populated
+#### 3.1 Vector Database Populated (for RAG)
 ```bash
 # Check Qdrant Cloud dashboard or run:
 cd backend
@@ -267,7 +267,7 @@ time curl -X POST http://localhost:8000/api/v1/chat \
 - [ ] Breakdown (approximate):
   - [ ] Embedding generation: < 500ms
   - [ ] Vector search: < 300ms
-  - [ ] OpenAI chat: < 2s
+  - [ ] OpenAI Agents SDK for chat completion: < 2s
 
 #### 3.5 Error Handling
 **Test Error Scenario 1: Invalid Request**
@@ -279,8 +279,8 @@ curl -X POST http://localhost:8000/api/v1/chat \
 - [ ] Returns 422 Unprocessable Entity
 - [ ] Error message is clear (e.g., "message cannot be empty")
 
-**Test Error Scenario 2: OpenAI API Failure**
-- [ ] Temporarily set invalid OpenAI API key
+**Test Error Scenario 2: Gemini API Failure**
+- [ ] Temporarily set invalid GEMINI API key
 - [ ] Send query
 - [ ] Returns 500 Internal Server Error
 - [ ] Error message: "AI service temporarily unavailable"
