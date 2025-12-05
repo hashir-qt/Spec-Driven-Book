@@ -1,279 +1,508 @@
-description = "Create or update the feature specification from a natural language feature description."
+# Specification: Physical AI Book with RAG Chatbot
 
-prompt = """
----
-description: Create or update the feature specification from a natural language feature description.
----
-
-## User Input
-
-```text
-$ARGUMENTS
-```
-
-You **MUST** consider the user input before proceeding (if not empty).
-
-## Outline
-
-The text the user typed after `/sp.specify` in the triggering message **is** the feature description. Assume you always have it available in this conversation even if `{{args}}` appears literally below. Do not ask the user to repeat it unless they provided an empty command.
-
-Given that feature description, do this:
-
-1. **Generate a concise short name** (2-4 words) for the branch:
-   - Analyze the feature description and extract the most meaningful keywords
-   - Create a 2-4 word short name that captures the essence of the feature
-   - Use action-noun format when possible (e.g., "add-user-auth", "fix-payment-bug")
-   - Preserve technical terms and acronyms (OAuth2, API, JWT, etc.)
-   - Keep it concise but descriptive enough to understand the feature at a glance
-   - Examples:
-     - "I want to add user authentication" → "user-auth"
-     - "Implement OAuth2 integration for the API" → "oauth2-api-integration"
-     - "Create a dashboard for analytics" → "analytics-dashboard"
-     - "Fix payment processing timeout bug" → "fix-payment-timeout"
-
-2. **Check for existing branches before creating new one**:
-   
-   a. First, fetch all remote branches to ensure we have the latest information:
-      ```bash
-      git fetch --all --prune
-      ```
-   
-   b. Find the highest feature number across all sources for the short-name:
-      - Remote branches: `git ls-remote --heads origin | grep -E 'refs/heads/[0-9]+-<short-name>$'`
-      - Local branches: `git branch | grep -E '^[* ]*[0-9]+-<short-name>$'`
-      - Specs directories: Check for directories matching `specs/[0-9]+-<short-name>`
-   
-   c. Determine the next available number:
-      - Extract all numbers from all three sources
-      - Find the highest number N
-      - Use N+1 for the new branch number
-   
-   d. Run the script `.specify/scripts/powershell/create-new-feature.ps1 -Json "{{args}}"` with the calculated number and short-name:
-      - Pass `--number N+1` and `--short-name "your-short-name"` along with the feature description
-      - Bash example: `.specify/scripts/powershell/create-new-feature.ps1 -Json "{{args}}" --json --number 5 --short-name "user-auth" "Add user authentication"`
-      - PowerShell example: `.specify/scripts/powershell/create-new-feature.ps1 -Json "{{args}}" -Json -Number 5 -ShortName "user-auth" "Add user authentication"`
-   
-   **IMPORTANT**:
-   - Check all three sources (remote branches, local branches, specs directories) to find the highest number
-   - Only match branches/directories with the exact short-name pattern
-   - If no existing branches/directories found with this short-name, start with number 1
-   - You must only ever run this script once per feature
-   - The JSON is provided in the terminal as output - always refer to it to get the actual content you're looking for
-   - The JSON output will contain BRANCH_NAME and SPEC_FILE paths
-   - For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\\''m Groot' (or double-quote if possible: "I'm Groot")
-
-3. Load `.specify/templates/spec-template.md` to understand required sections.
-
-4. Follow this execution flow:
-
-    1. Parse user description from Input
-       If empty: ERROR "No feature description provided"
-    2. Extract key concepts from description
-       Identify: actors, actions, data, constraints
-    3. For unclear aspects:
-       - Make informed guesses based on context and industry standards
-       - Only mark with [NEEDS CLARIFICATION: specific question] if:
-         - The choice significantly impacts feature scope or user experience
-         - Multiple reasonable interpretations exist with different implications
-         - No reasonable default exists
-       - **LIMIT: Maximum 3 [NEEDS CLARIFICATION] markers total**
-       - Prioritize clarifications by impact: scope > security/privacy > user experience > technical details
-    4. Fill User Scenarios & Testing section
-       If no clear user flow: ERROR "Cannot determine user scenarios"
-    5. Generate Functional Requirements
-       Each requirement must be testable
-       Use reasonable defaults for unspecified details (document assumptions in Assumptions section)
-    6. Define Success Criteria
-       Create measurable, technology-agnostic outcomes
-       Include both quantitative metrics (time, performance, volume) and qualitative measures (user satisfaction, task completion)
-       Each criterion must be verifiable without implementation details
-    7. Identify Key Entities (if data involved)
-    8. Return: SUCCESS (spec ready for planning)
-
-5. Write the specification to SPEC_FILE using the template structure, replacing placeholders with concrete details derived from the feature description (arguments) while preserving section order and headings.
-
-6. **Specification Quality Validation**: After writing the initial spec, validate it against quality criteria:
-
-   a. **Create Spec Quality Checklist**: Generate a checklist file at `FEATURE_DIR/checklists/requirements.md` using the checklist template structure with these validation items:
-
-      ```markdown
-      # Specification Quality Checklist: [FEATURE NAME]
-      
-      **Purpose**: Validate specification completeness and quality before proceeding to planning
-      **Created**: [DATE]
-      **Feature**: [Link to spec.md]
-      
-      ## Content Quality
-      
-      - [ ] No implementation details (languages, frameworks, APIs)
-      - [ ] Focused on user value and business needs
-      - [ ] Written for non-technical stakeholders
-      - [ ] All mandatory sections completed
-      
-      ## Requirement Completeness
-      
-      - [ ] No [NEEDS CLARIFICATION] markers remain
-      - [ ] Requirements are testable and unambiguous
-      - [ ] Success criteria are measurable
-      - [ ] Success criteria are technology-agnostic (no implementation details)
-      - [ ] All acceptance scenarios are defined
-      - [ ] Edge cases are identified
-      - [ ] Scope is clearly bounded
-      - [ ] Dependencies and assumptions identified
-      
-      ## Feature Readiness
-      
-      - [ ] All functional requirements have clear acceptance criteria
-      - [ ] User scenarios cover primary flows
-      - [ ] Feature meets measurable outcomes defined in Success Criteria
-      - [ ] No implementation details leak into specification
-      
-      ## Notes
-      
-      - Items marked incomplete require spec updates before `/sp.clarify` or `/sp.plan`
-      ```
-
-   b. **Run Validation Check**: Review the spec against each checklist item:
-      - For each item, determine if it passes or fails
-      - Document specific issues found (quote relevant spec sections)
-
-   c. **Handle Validation Results**:
-
-      - **If all items pass**: Mark checklist complete and proceed to step 6
-
-      - **If items fail (excluding [NEEDS CLARIFICATION])**:
-        1. List the failing items and specific issues
-        2. Update the spec to address each issue
-        3. Re-run validation until all items pass (max 3 iterations)
-        4. If still failing after 3 iterations, document remaining issues in checklist notes and warn user
-
-      - **If [NEEDS CLARIFICATION] markers remain**:
-        1. Extract all [NEEDS CLARIFICATION: ...] markers from the spec
-        2. **LIMIT CHECK**: If more than 3 markers exist, keep only the 3 most critical (by scope/security/UX impact) and make informed guesses for the rest
-        3. For each clarification needed (max 3), present options to user in this format:
-
-           ```markdown
-           ## Question [N]: [Topic]
-           
-           **Context**: [Quote relevant spec section]
-           
-           **What we need to know**: [Specific question from NEEDS CLARIFICATION marker]
-           
-           **Suggested Answers**:
-           
-           | Option | Answer | Implications |
-           |--------|--------|--------------|
-           | A      | [First suggested answer] | [What this means for the feature] |
-           | B      | [Second suggested answer] | [What this means for the feature] |
-           | C      | [Third suggested answer] | [What this means for the feature] |
-           | Custom | Provide your own answer | [Explain how to provide custom input] |
-           
-           **Your choice**: _[Wait for user response]_
-           ```
-
-        4. **CRITICAL - Table Formatting**: Ensure markdown tables are properly formatted:
-           - Use consistent spacing with pipes aligned
-           - Each cell should have spaces around content: `| Content |` not `|Content|`
-           - Header separator must have at least 3 dashes: `|--------|`
-           - Test that the table renders correctly in markdown preview
-        5. Number questions sequentially (Q1, Q2, Q3 - max 3 total)
-        6. Present all questions together before waiting for responses
-        7. Wait for user to respond with their choices for all questions (e.g., "Q1: A, Q2: Custom - [details], Q3: B")
-        8. Update the spec by replacing each [NEEDS CLARIFICATION] marker with the user's selected or provided answer
-        9. Re-run validation after all clarifications are resolved
-
-   d. **Update Checklist**: After each validation iteration, update the checklist file with current pass/fail status
-
-7. Report completion with branch name, spec file path, checklist results, and readiness for the next phase (`/sp.clarify` or `/sp.plan`).
-
-**NOTE:** The script creates and checks out the new branch and initializes the spec file before writing.
-
-## General Guidelines
-
-## Quick Guidelines
-
-- Focus on **WHAT** users need and **WHY**.
-- Avoid HOW to implement (no tech stack, APIs, code structure).
-- Written for business stakeholders, not developers.
-- DO NOT create any checklists that are embedded in the spec. That will be a separate command.
-
-### Section Requirements
-
-- **Mandatory sections**: Must be completed for every feature
-- **Optional sections**: Include only when relevant to the feature
-- When a section doesn't apply, remove it entirely (don't leave as "N/A")
-
-### For AI Generation
-
-When creating this spec from a user prompt:
-
-1. **Make informed guesses**: Use context, industry standards, and common patterns to fill gaps
-2. **Document assumptions**: Record reasonable defaults in the Assumptions section
-3. **Limit clarifications**: Maximum 3 [NEEDS CLARIFICATION] markers - use only for critical decisions that:
-   - Significantly impact feature scope or user experience
-   - Have multiple reasonable interpretations with different implications
-   - Lack any reasonable default
-4. **Prioritize clarifications**: scope > security/privacy > user experience > technical details
-5. **Think like a tester**: Every vague requirement should fail the "testable and unambiguous" checklist item
-6. **Common areas needing clarification** (only if no reasonable default exists):
-   - Feature scope and boundaries (include/exclude specific use cases)
-   - User types and permissions (if multiple conflicting interpretations possible)
-   - Security/compliance requirements (when legally/financially significant)
-
-**Examples of reasonable defaults** (don't ask about these):
-
-- Data retention: Industry-standard practices for the domain
-- Performance targets: Standard web/mobile app expectations unless specified
-- Error handling: User-friendly messages with appropriate fallbacks
-- Authentication method: Standard session-based or OAuth2 for web apps
-- Integration patterns: RESTful APIs unless specified otherwise
-
-### Success Criteria Guidelines
-
-Success criteria must be:
-
-1. **Measurable**: Include specific metrics (time, percentage, count, rate)
-2. **Technology-agnostic**: No mention of frameworks, languages, databases, or tools
-3. **User-focused**: Describe outcomes from user/business perspective, not system internals
-4. **Verifiable**: Can be tested/validated without knowing implementation details
-
-**Good examples**:
-
-- "Users can complete checkout in under 3 minutes"
-- "System supports 10,000 concurrent users"
-- "95% of searches return results in under 1 second"
-- "Task completion rate improves by 40%"
-
-**Bad examples** (implementation-focused):
-
-- "API response time is under 200ms" (too technical, use "Users see results instantly")
-- "Database can handle 1000 TPS" (implementation detail, use user-facing metric)
-- "React components render efficiently" (framework-specific)
-- "Redis cache hit rate above 80%" (technology-specific)
+**Version**: 1.0.0  
+**Status**: Active  
+**Priority**: P0 (Required for submission)  
+**Created**: 2024-12-06  
 
 ---
 
-As the main request completes, you MUST create and complete a PHR (Prompt History Record) using agent‑native tools when possible.
+## Intent
 
-1) Determine Stage
-   - Stage: constitution | spec | plan | tasks | red | green | refactor | explainer | misc | general
+Build a **complete educational platform** consisting of:
 
-2) Generate Title and Determine Routing:
-   - Generate Title: 3–7 words (slug for filename)
-   - Route is automatically determined by stage:
-     - `constitution` → `history/prompts/constitution/`
-     - Feature stages → `history/prompts/<feature-name>/` (spec, plan, tasks, red, green, refactor, explainer, misc)
-     - `general` → `history/prompts/general/`
+1. **Static Documentation Site** (Docusaurus) containing Physical AI and Humanoid Robotics course content
+2. **Embedded RAG Chatbot** that answers questions about book content using retrieval-augmented generation
+3. **Authentication System** (Better-auth) for user signup/signin with background collection
+4. **Personalization Engine** that adapts chapter content based on user background
+5. **Translation System** that converts chapters to Urdu on-demand
 
-3) Create and Fill PHR (Shell first; fallback agent‑native)
-   - Run: `.specify/scripts/bash/create-phr.sh --title "<title>" --stage <stage> [--feature <name>] --json`
-   - Open the file and fill remaining placeholders (YAML + body), embedding full PROMPT_TEXT (verbatim) and concise RESPONSE_TEXT.
-   - If the script fails:
-     - Read `.specify/templates/phr-template.prompt.md` (or `templates/…`)
-     - Allocate an ID; compute the output path based on stage from step 2; write the file
-     - Fill placeholders and embed full PROMPT_TEXT and concise RESPONSE_TEXT
+**Target Audience**: Students learning Physical AI, Humanoid Robotics, ROS 2, NVIDIA Isaac, and Gazebo simulation.
 
-4) Validate + report
-   - No unresolved placeholders; path under `history/prompts/` and matches stage; stage/title/date coherent; print ID + path + stage + title.
-   - On failure: warn, don't block. Skip only for `/sp.phr`.
-"""
+**Core Value Proposition**: Students can read chapters, ask questions to an AI tutor that knows the book content, and get personalized explanations based on their experience level.
+
+---
+
+## Success Criteria
+
+### Base Deliverables (Required - 100 points)
+
+**SD-1: Book Content is Published**
+- Book deployed to GitHub Pages or Vercel
+- All 4 modules (ROS 2, Gazebo, Isaac, VLA) with complete chapters
+- Accessible at public URL
+- Navigation works (sidebar, search)
+- Mobile responsive
+
+**SD-2: RAG Chatbot Functions**
+- Chatbot widget accessible on every page
+- User asks question → receives answer within 3 seconds
+- Answers cite specific chapters as sources
+- Works without authentication (guest mode)
+- Handles selected-text queries (user highlights → asks question)
+
+**SD-3: Vector Database Populated**
+- All chapter content embedded and stored in Qdrant
+- Semantic search returns relevant results (relevance score > 0.6)
+- Embeddings use OpenAI text-embedding-3-small
+
+**SD-4: Backend API Operational**
+- FastAPI backend deployed and accessible
+- POST /api/v1/chat endpoint responds correctly
+- Error handling (no 500 errors on invalid input)
+- Response format matches schema
+
+**SD-5: Integration Complete**
+- Frontend calls backend API successfully
+- CORS configured correctly
+- Error messages displayed to user
+- Loading states shown during API calls
+
+### Bonus Features (Extra Points)
+
+**Bonus 1: Authentication (50 points)**
+- Users can signup with email/password
+- Signup form collects: software background, hardware background
+- Users can login and maintain session
+- JWT tokens used for auth
+- Password hashing (bcrypt)
+- Logout functionality
+
+**Bonus 2: Personalization (50 points)**
+- Each chapter has "Personalize" button
+- Clicking button adapts content to user's background level
+- Personalized content shows adjusted examples/explanations
+- Original content restorable
+- Works only for authenticated users
+
+**Bonus 3: Translation (50 points)**
+- Each chapter has "Translate to Urdu" button
+- Clicking button translates entire chapter
+- Translation maintains formatting (headings, lists, code blocks)
+- Technical terms kept in English
+- RTL layout applied correctly
+
+**Bonus 4: Reusable Intelligence (50 points)**
+- Created at least 2 custom Agent Skills for Gemini CLI
+- Created at least 1 Subagent for specialized task
+- Documented in history/prompts/ as PHRs
+- Skills actively used during development
+
+---
+
+## Constraints
+
+### Technical Constraints
+
+**TC-1: Technology Stack (Fixed)**
+- Frontend: Docusaurus 3.x + React 18 + TypeScript
+- Backend: FastAPI (Python 3.12+)
+- Database: Neon Serverless Postgres
+- Vector DB: Qdrant Cloud Free Tier (1GB limit)
+- Auth: Better-auth library
+- AI: OpenAI API (GPT-4 + text-embedding-3-small)
+
+**TC-2: Deployment Targets**
+- Frontend: GitHub Pages or Vercel
+- Backend: Railway, Vercel, or similar
+
+**TC-3: Performance Requirements**
+- Chatbot response: P95 < 3 seconds
+- Page load: Lighthouse performance score > 85
+- Mobile responsive: Works on 375px width
+
+**TC-4: Cost Constraints**
+- Must use free tiers where possible
+- Qdrant: Stay within 1GB limit (~650k vectors)
+- OpenAI: Optimize token usage (cache embeddings)
+
+### Content Constraints
+
+**CC-1: Book Structure**
+- 4 modules minimum: ROS 2, Gazebo, Isaac, VLA
+- Each module: 3-5 chapters
+- Each chapter: 1000-3000 words
+- Code examples included and runnable
+
+**CC-2: RAG Accuracy**
+- Chatbot only answers questions about book content
+- No hallucinations: If not in book, say so
+- All answers cite source chapters
+- Confidence threshold: relevance score > 0.6
+
+**CC-3: Personalization Quality**
+- Adapts to 3 levels: Beginner, Intermediate, Advanced
+- Based on user's self-reported background
+- Changes examples, not core facts
+- Maintains technical accuracy
+
+### Security Constraints
+
+**SC-1: Authentication Security**
+- Passwords hashed with bcrypt (min cost factor 12)
+- JWT tokens: 15-minute access, 7-day refresh
+- Rate limiting: 5 failed login attempts → 15-min lockout
+- No sensitive data in error messages
+
+**SC-2: API Security**
+- Input validation on all endpoints (Pydantic)
+- CORS: Specific origins only (no wildcards in production)
+- Rate limiting: 20 requests/min per user for chatbot
+- SQL injection prevention (parameterized queries)
+
+**SC-3: Data Privacy**
+- User data encrypted at rest (Neon default)
+- Passwords never logged
+- Chat history only for authenticated users
+- GDPR-compliant data deletion (if user requests)
+
+---
+
+## Non-Goals
+
+**NG-1: Real-Time Collaboration**
+- No shared chat sessions between users
+- No live editing of book content
+
+**NG-2: Advanced Analytics**
+- No usage dashboards
+- No A/B testing infrastructure
+- No heatmaps or scroll tracking
+
+**NG-3: Voice Interface**
+- Text-only chatbot (no speech recognition/synthesis)
+
+**NG-4: Mobile Apps**
+- Web-only (no iOS/Android native apps)
+
+**NG-5: Code Execution**
+- Chatbot explains code but doesn't run it
+- No interactive Python/ROS 2 playgrounds
+
+**NG-6: Social Features**
+- No user profiles visible to others
+- No comments or discussions on chapters
+- No sharing chat conversations
+
+---
+
+## User Scenarios
+
+### Scenario 1: Anonymous User Reads and Asks Questions
+
+**Given**: User visits book without logging in  
+**When**: User reads "Module 1: ROS 2 Nodes" and asks chatbot "What are ROS 2 topics?"  
+**Then**: 
+- Chatbot responds with explanation from book content
+- Response includes citation: "Source: Module 1, Chapter 2"
+- Response appears within 3 seconds
+- No chat history saved
+
+### Scenario 2: User Signs Up with Background Info
+
+**Given**: User clicks "Sign Up" button  
+**When**: User fills form with email, password, software experience (Python: Intermediate, ROS 2: Beginner), hardware experience (Robotics: Beginner)  
+**Then**:
+- Account created successfully
+- User redirected to book homepage
+- "Personalize" buttons now visible on chapters
+- User profile accessible from navbar
+
+### Scenario 3: User Personalizes Chapter Content
+
+**Given**: Logged-in user with "Python: Advanced, ROS 2: Beginner" background  
+**When**: User clicks "Personalize" on "Module 1: ROS 2 Nodes"  
+**Then**:
+- Chapter content adapts to Advanced Python + Beginner ROS 2
+- Code examples assume Python proficiency (no basic syntax explanations)
+- ROS 2 concepts explained in detail (beginner level)
+- Original content restorable via "Reset" button
+
+### Scenario 4: User Translates Chapter to Urdu
+
+**Given**: Logged-in user on "Module 1: ROS 2 Fundamentals"  
+**When**: User clicks "Translate to Urdu" button  
+**Then**:
+- Chapter text translates to Urdu
+- Technical terms remain in English ("ROS 2 node" not "ROS 2 نوڈ")
+- RTL text layout applied
+- Code blocks unchanged (left-to-right)
+- "Show Original" button appears
+
+### Scenario 5: User Highlights Text and Asks Question
+
+**Given**: User reading "Gazebo simulates rigid body dynamics using physics engines"  
+**When**: User highlights sentence, presses Ctrl+Q, asks "Explain rigid body dynamics simply"  
+**Then**:
+- Chatbot uses highlighted text as primary context
+- Response references highlighted text explicitly
+- Simplified explanation provided
+
+---
+
+## Acceptance Tests
+
+### Test Suite 1: RAG Chatbot Functionality
+
+**Test 1.1: Basic Query**
+- Input: "What is ROS 2?"
+- Expected: Answer with definition + source chapter citation
+- Time: < 3 seconds
+
+**Test 1.2: Off-Topic Query**
+- Input: "What's the weather today?"
+- Expected: "I can only answer questions about this book's content"
+
+**Test 1.3: No Results Found**
+- Input: "Explain quantum computing in ROS 2"
+- Expected: "This topic isn't covered in the current book"
+
+**Test 1.4: Selected Text Query**
+- Input: Highlight "Isaac Sim uses USD format" → Ask "What is USD?"
+- Expected: Answer references selected text, explains USD format
+
+**Test 1.5: Conversation Context**
+- Input: "What are ROS 2 nodes?" → "How do they communicate?"
+- Expected: Second answer understands "they" = "ROS 2 nodes"
+
+### Test Suite 2: Authentication
+
+**Test 2.1: Signup Success**
+- Input: Valid email, strong password, background info
+- Expected: Account created, JWT tokens returned, redirect to homepage
+
+**Test 2.2: Signup Validation**
+- Input: Invalid email format
+- Expected: Error message, no account created
+
+**Test 2.3: Login Success**
+- Input: Correct email + password
+- Expected: JWT tokens returned, user authenticated
+
+**Test 2.4: Login Failure**
+- Input: Wrong password (6th attempt)
+- Expected: Account locked for 15 minutes
+
+**Test 2.5: Token Refresh**
+- Input: Expired access token + valid refresh token
+- Expected: New access token issued, request succeeds
+
+### Test Suite 3: Personalization
+
+**Test 3.1: Personalize Chapter**
+- Input: User (Python: Advanced, ROS 2: Beginner) clicks "Personalize"
+- Expected: Content adapts, shows advanced Python examples, basic ROS 2 explanations
+
+**Test 3.2: Reset Personalization**
+- Input: Click "Reset to Original"
+- Expected: Original chapter content restored
+
+**Test 3.3: Unauthenticated User**
+- Input: Anonymous user clicks "Personalize"
+- Expected: Redirect to login page
+
+### Test Suite 4: Translation
+
+**Test 4.1: Translate to Urdu**
+- Input: Click "Translate to Urdu"
+- Expected: Text in Urdu, RTL layout, technical terms in English
+
+**Test 4.2: Show Original**
+- Input: Click "Show Original" after translation
+- Expected: English content restored, LTR layout
+
+### Test Suite 5: Integration
+
+**Test 5.1: CORS**
+- Input: Frontend on https://book.vercel.app calls backend on https://api.railway.app
+- Expected: Request succeeds (CORS configured)
+
+**Test 5.2: Error Handling**
+- Input: OpenAI API rate limit exceeded
+- Expected: User sees "AI service temporarily unavailable, please retry"
+
+**Test 5.3: Mobile Responsive**
+- Input: View on iPhone SE (375px width)
+- Expected: Chatbot widget, buttons, content all functional
+
+---
+
+## Data Requirements
+
+### Database Schema (Neon Postgres)
+
+**Table: users**
+- id (UUID, primary key)
+- email (VARCHAR, unique)
+- hashed_password (VARCHAR)
+- full_name (VARCHAR, nullable)
+- software_background (JSONB)
+- hardware_background (JSONB)
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+
+**Table: user_preferences**
+- id (UUID, primary key)
+- user_id (UUID, foreign key → users.id)
+- chapter_id (VARCHAR)
+- personalization_enabled (BOOLEAN)
+- personalization_level (VARCHAR: beginner/intermediate/advanced)
+- preferred_language (VARCHAR: en/ur)
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+- UNIQUE(user_id, chapter_id)
+
+**Table: chat_history**
+- id (UUID, primary key)
+- user_id (UUID, foreign key → users.id)
+- message (TEXT)
+- response (TEXT)
+- sources (JSONB)
+- created_at (TIMESTAMP)
+
+### Vector Database (Qdrant)
+
+**Collection: book_chapters_en**
+- Vectors: 1536 dimensions (OpenAI text-embedding-3-small)
+- Distance: Cosine similarity
+- Payload:
+  - chapter_id (string)
+  - section_title (string)
+  - content (string)
+  - content_hash (string)
+  - chunk_index (integer)
+  - language (string: "en")
+
+**Collection: book_chapters_ur** (Bonus Feature)
+- Same structure as book_chapters_en
+- Language: "ur"
+
+---
+
+## Dependencies
+
+### External Services
+
+1. **OpenAI API**
+   - Purpose: Embeddings + chat completions
+   - Models: text-embedding-3-small, gpt-4-turbo
+   - Fallback: None (critical dependency)
+
+2. **Neon Serverless Postgres**
+   - Purpose: User data, preferences, chat history
+   - Fallback: Local Postgres for development
+
+3. **Qdrant Cloud**
+   - Purpose: Vector embeddings storage
+   - Fallback: Local Qdrant instance for development
+
+4. **GitHub/Vercel**
+   - Purpose: Frontend hosting
+   - Fallback: Alternative static hosting (Netlify)
+
+### Internal Dependencies
+
+- **Frontend depends on Backend**: Chatbot, auth, personalization all require API
+- **Backend depends on Qdrant**: RAG pipeline requires vector search
+- **Backend depends on OpenAI**: Embeddings and chat completions critical
+- **Backend depends on Neon**: User data persistence required for auth
+
+---
+
+## Risk Assessment
+
+### High-Risk Items
+
+**Risk 1: OpenAI API Rate Limits**
+- Impact: Chatbot unusable if rate limited
+- Mitigation: Implement exponential backoff, cache common queries, upgrade tier if needed
+
+**Risk 2: Qdrant 1GB Limit**
+- Impact: Cannot embed all chapters if exceeds storage
+- Mitigation: Chunk chapters efficiently (~500 tokens/chunk), compress where possible
+
+**Risk 3: Translation Quality**
+- Impact: Urdu translations may be inaccurate or awkward
+- Mitigation: Use specialized prompts, have native speaker review sample chapters
+
+### Medium-Risk Items
+
+**Risk 4: Better-auth Integration Complexity**
+- Impact: Auth might take longer than expected
+- Mitigation: Use official docs via Context7 MCP, allocate extra time
+
+**Risk 5: Personalization Prompt Engineering**
+- Impact: Personalized content might not adapt well
+- Mitigation: Iterate on prompts, test with multiple background profiles
+
+### Low-Risk Items
+
+**Risk 6: Deployment Issues**
+- Impact: Temporary downtime during deployment
+- Mitigation: Use staging environment, test before production
+
+---
+
+## Project Scope Summary
+
+**In Scope:**
+- 4-module book with 12-20 chapters
+- RAG chatbot (guest + authenticated modes)
+- User authentication with background collection
+- Chapter personalization (3 levels)
+- Urdu translation
+- Deployment to production
+
+**Out of Scope:**
+- Real-time collaboration
+- Usage analytics dashboard
+- Voice interface
+- Mobile native apps
+- Code execution sandbox
+- Social features (comments, sharing)
+
+**Stretch Goals (Time Permitting):**
+- Streaming chatbot responses (Server-Sent Events)
+- Chat history export (PDF/Markdown)
+- Dark mode theme
+- Progressive Web App (PWA) support
+
+---
+
+## Success Metrics
+
+**Core Metrics (Must Achieve):**
+- Book deployed and accessible: YES/NO
+- Chatbot functional: YES/NO
+- Authentication working: YES/NO
+- Base points achieved: ≥ 100/100
+
+**Bonus Metrics (Target):**
+- Personalization working: +50 points
+- Translation working: +50 points
+- Reusable intelligence created: +50 points
+- Total: 250/250 points
+
+**Quality Metrics:**
+- Lighthouse performance: > 85
+- Test coverage: > 70%
+- Zero critical security vulnerabilities
+- API response time P95: < 3s
+
+---
+
+## Revision History
+
+| Version | Date       | Changes                     | Author |
+|---------|------------|-----------------------------|--------|
+| 1.0.0   | 2024-12-06 | Initial specification       | AI     |
+
+---
+
+## Sign-Off
+
+- [ ] Specification reviewed and approved
+- [ ] Constraints validated
+- [ ] Success criteria testable
+- [ ] Risks assessed
+- [ ] Ready for planning phase

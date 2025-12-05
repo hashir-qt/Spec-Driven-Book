@@ -1,158 +1,948 @@
-description = "Generate an actionable, dependency-ordered tasks.md for the feature based on available design artifacts."
+# Implementation Tasks: Physical AI Book with RAG Chatbot
 
-prompt = """
+**Version**: 1.0.0  
+**Status**: Active  
+**Created**: 2024-12-06  
+**Dependencies**: plan.md
+
 ---
-description: Generate an actionable, dependency-ordered tasks.md for the feature based on available design artifacts.
----
 
-## User Input
+## Task Breakdown Structure
 
-```text
-$ARGUMENTS
+### Phase 1: Foundation Setup
+
+#### Task 1.1: Initialize Project Structure
+**Duration**: 30 minutes  
+**Dependencies**: None  
+**Type**: Setup  
+
+**What to do**:
+- Create monorepo root directory
+- Run `npx create-docusaurus@latest frontend classic --typescript`
+- Create `backend/` directory with FastAPI structure
+- Create `.specify/`, `specs/`, `history/` directories
+- Create `.gitignore` (exclude .env, node_modules, __pycache__)
+
+**Acceptance Criteria**:
+- Directory structure matches plan.md
+- `frontend/` has working Docusaurus installation
+- `backend/` has main.py with FastAPI() instance
+- Git repository initialized
+
+**Validation**:
+```bash
+cd frontend && npm start  # Should open Docusaurus
+cd backend && uvicorn app.main:app --reload  # Should show FastAPI docs
 ```
 
-You **MUST** consider the user input before proceeding (if not empty).
+---
 
-## Outline
+#### Task 1.2: Configure Environment Variables
+**Duration**: 20 minutes  
+**Dependencies**: Task 1.1  
+**Type**: Configuration  
 
-1. **Setup**: Run `.specify/scripts/powershell/check-prerequisites.ps1 -Json` from repo root and parse FEATURE_DIR and AVAILABLE_DOCS list. All paths must be absolute. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\\''m Groot' (or double-quote if possible: "I'm Groot").
+**What to do**:
+- Create `backend/.env.example` with template:
+  ```
+  OPENAI_API_KEY=sk-proj-...
+  QDRANT_URL=https://...
+  QDRANT_API_KEY=...
+  NEON_DATABASE_URL=postgres://...
+  JWT_SECRET_KEY=generate-random-key
+  ```
+- Create `frontend/.env.example`:
+  ```
+  REACT_APP_API_URL=http://localhost:8000/api/v1
+  ```
+- Add instructions in README for creating `.env` files
 
-2. **Load design documents**: Read from FEATURE_DIR:
-   - **Required**: plan.md (tech stack, libraries, structure), spec.md (user stories with priorities)
-   - **Optional**: data-model.md (entities), contracts/ (API endpoints), research.md (decisions), quickstart.md (test scenarios)
-   - Note: Not all projects have all documents. Generate tasks based on what's available.
-
-3. **Execute task generation workflow**:
-   - Load plan.md and extract tech stack, libraries, project structure
-   - Load spec.md and extract user stories with their priorities (P1, P2, P3, etc.)
-   - If data-model.md exists: Extract entities and map to user stories
-   - If contracts/ exists: Map endpoints to user stories
-   - If research.md exists: Extract decisions for setup tasks
-   - Generate tasks organized by user story (see Task Generation Rules below)
-   - Generate dependency graph showing user story completion order
-   - Create parallel execution examples per user story
-   - Validate task completeness (each user story has all needed tasks, independently testable)
-
-4. **Generate tasks.md**: Use `.specify.specify/templates/tasks-template.md` as structure, fill with:
-   - Correct feature name from plan.md
-   - Phase 1: Setup tasks (project initialization)
-   - Phase 2: Foundational tasks (blocking prerequisites for all user stories)
-   - Phase 3+: One phase per user story (in priority order from spec.md)
-   - Each phase includes: story goal, independent test criteria, tests (if requested), implementation tasks
-   - Final Phase: Polish & cross-cutting concerns
-   - All tasks must follow the strict checklist format (see Task Generation Rules below)
-   - Clear file paths for each task
-   - Dependencies section showing story completion order
-   - Parallel execution examples per story
-   - Implementation strategy section (MVP first, incremental delivery)
-
-5. **Report**: Output path to generated tasks.md and summary:
-   - Total task count
-   - Task count per user story
-   - Parallel opportunities identified
-   - Independent test criteria for each story
-   - Suggested MVP scope (typically just User Story 1)
-   - Format validation: Confirm ALL tasks follow the checklist format (checkbox, ID, labels, file paths)
-
-Context for task generation: {{args}}
-
-The tasks.md should be immediately executable - each task must be specific enough that an LLM can complete it without additional context.
-
-## Task Generation Rules
-
-**CRITICAL**: Tasks MUST be organized by user story to enable independent implementation and testing.
-
-**Tests are OPTIONAL**: Only generate test tasks if explicitly requested in the feature specification or if user requests TDD approach.
-
-### Checklist Format (REQUIRED)
-
-Every task MUST strictly follow this format:
-
-```text
-- [ ] [TaskID] [P?] [Story?] Description with file path
-```
-
-**Format Components**:
-
-1. **Checkbox**: ALWAYS start with `- [ ]` (markdown checkbox)
-2. **Task ID**: Sequential number (T001, T002, T003...) in execution order
-3. **[P] marker**: Include ONLY if task is parallelizable (different files, no dependencies on incomplete tasks)
-4. **[Story] label**: REQUIRED for user story phase tasks only
-   - Format: [US1], [US2], [US3], etc. (maps to user stories from spec.md)
-   - Setup phase: NO story label
-   - Foundational phase: NO story label  
-   - User Story phases: MUST have story label
-   - Polish phase: NO story label
-5. **Description**: Clear action with exact file path
-
-**Examples**:
-
-- ✅ CORRECT: `- [ ] T001 Create project structure per implementation plan`
-- ✅ CORRECT: `- [ ] T005 [P] Implement authentication middleware in src/middleware/auth.py`
-- ✅ CORRECT: `- [ ] T012 [P] [US1] Create User model in src/models/user.py`
-- ✅ CORRECT: `- [ ] T014 [US1] Implement UserService in src/services/user_service.py`
-- ❌ WRONG: `- [ ] Create User model` (missing ID and Story label)
-- ❌ WRONG: `T001 [US1] Create model` (missing checkbox)
-- ❌ WRONG: `- [ ] [US1] Create User model` (missing Task ID)
-- ❌ WRONG: `- [ ] T001 [US1] Create model` (missing file path)
-
-### Task Organization
-
-1. **From User Stories (spec.md)** - PRIMARY ORGANIZATION:
-   - Each user story (P1, P2, P3...) gets its own phase
-   - Map all related components to their story:
-     - Models needed for that story
-     - Services needed for that story
-     - Endpoints/UI needed for that story
-     - If tests requested: Tests specific to that story
-   - Mark story dependencies (most stories should be independent)
-
-2. **From Contracts**:
-   - Map each contract/endpoint → to the user story it serves
-   - If tests requested: Each contract → contract test task [P] before implementation in that story's phase
-
-3. **From Data Model**:
-   - Map each entity to the user story(ies) that need it
-   - If entity serves multiple stories: Put in earliest story or Setup phase
-   - Relationships → service layer tasks in appropriate story phase
-
-4. **From Setup/Infrastructure**:
-   - Shared infrastructure → Setup phase (Phase 1)
-   - Foundational/blocking tasks → Foundational phase (Phase 2)
-   - Story-specific setup → within that story's phase
-
-### Phase Structure
-
-- **Phase 1**: Setup (project initialization)
-- **Phase 2**: Foundational (blocking prerequisites - MUST complete before user stories)
-- **Phase 3+**: User Stories in priority order (P1, P2, P3...)
-  - Within each story: Tests (if requested) → Models → Services → Endpoints → Integration
-  - Each phase should be a complete, independently testable increment
-- **Final Phase**: Polish & Cross-Cutting Concerns
+**Acceptance Criteria**:
+- `.env.example` files created (no actual secrets)
+- README documents how to configure environment
+- `.env` added to .gitignore
 
 ---
 
-As the main request completes, you MUST create and complete a PHR (Prompt History Record) using agent‑native tools when possible.
+#### Task 1.3: Test External API Connections
+**Duration**: 30 minutes  
+**Dependencies**: Task 1.2  
+**Type**: Validation  
 
-1) Determine Stage
-   - Stage: constitution | spec | plan | tasks | red | green | refactor | explainer | misc | general
+**What to do**:
+- Write test script `backend/scripts/test_connections.py`:
+  - Test OpenAI API (generate sample embedding)
+  - Test Qdrant connection (list collections)
+  - Test Neon Postgres (execute simple query)
+- Run script, verify all connections succeed
 
-2) Generate Title and Determine Routing:
-   - Generate Title: 3–7 words (slug for filename)
-   - Route is automatically determined by stage:
-     - `constitution` → `history/prompts/constitution/`
-     - Feature stages → `history/prompts/<feature-name>/` (spec, plan, tasks, red, green, refactor, explainer, misc)
-     - `general` → `history/prompts/general/`
+**Acceptance Criteria**:
+- Script runs without errors
+- OpenAI returns 1536-dimensional embedding
+- Qdrant connection successful
+- Neon query returns result
 
-3) Create and Fill PHR (Shell first; fallback agent‑native)
-   - Run: `.specify/scripts/bash/create-phr.sh --title "<title>" --stage <stage> [--feature <name>] --json`
-   - Open the file and fill remaining placeholders (YAML + body), embedding full PROMPT_TEXT (verbatim) and concise RESPONSE_TEXT.
-   - If the script fails:
-     - Read `.specify/templates/phr-template.prompt.md` (or `templates/…`)
-     - Allocate an ID; compute the output path based on stage from step 2; write the file
-     - Fill placeholders and embed full PROMPT_TEXT and concise RESPONSE_TEXT
+---
 
-4) Validate + report
-   - No unresolved placeholders; path under `history/prompts/` and matches stage; stage/title/date coherent; print ID + path + stage + title.
-   - On failure: warn, don't block. Skip only for `/sp.phr`.
-"""
+#### Task 1.4: Setup Development Documentation
+**Duration**: 30 minutes  
+**Dependencies**: Task 1.1, 1.2, 1.3  
+**Type**: Documentation  
+
+**What to do**:
+- Create `README.md` with:
+  - Project overview
+  - Prerequisites (Node.js 18+, Python 3.12+)
+  - Setup instructions (clone → install → configure .env → run)
+  - Available scripts (npm start, uvicorn)
+  - Troubleshooting common issues
+- Create `CONTRIBUTING.md` with:
+  - Git workflow (branch naming, commit messages)
+  - Code style guide (ESLint, Black)
+  - Testing requirements
+
+**Acceptance Criteria**:
+- New developer can follow README and set up project in < 30 minutes
+- Documentation is clear and complete
+
+---
+
+### Phase 2: Book Content Creation
+
+#### Task 2.1: Research Module 1 Content (ROS 2)
+**Duration**: 45 minutes  
+**Dependencies**: Task 1.1  
+**Type**: Research  
+
+**What to do**:
+- Use Context7 MCP to query official ROS 2 documentation
+- Research topics:
+  - ROS 2 architecture (nodes, topics, services, actions)
+  - rclpy Python API
+  - Message types (std_msgs, geometry_msgs)
+  - Quality of Service (QoS) settings
+- Take notes on key concepts, examples
+
+**Acceptance Criteria**:
+- Notes cover 4 chapter topics
+- Official ROS 2 docs referenced
+- Code examples identified
+
+**Gemini CLI Prompt**:
+```
+Use Context7 MCP to research ROS 2 fundamentals:
+1. What are ROS 2 nodes, topics, services, actions?
+2. How to create a node with rclpy?
+3. What are common message types?
+4. How does QoS work?
+
+Provide: Concept explanations + code examples + best practices
+```
+
+---
+
+#### Task 2.2: Write Module 1, Chapter 1 (ROS 2 Introduction)
+**Duration**: 60 minutes  
+**Dependencies**: Task 2.1  
+**Type**: Content Creation  
+
+**What to do**:
+- Create `frontend/docs/module-1-ros2/01-introduction.md`
+- Structure:
+  - What is ROS 2? (middleware, history, why upgrade from ROS 1)
+  - Core concepts (nodes, topics, services, actions)
+  - Installation (link to official guide)
+  - Your first "Hello World" node (Python)
+- Include:
+  - Mermaid diagram (ROS 2 architecture)
+  - Complete Python example (runnable)
+  - Exercises for practice
+
+**Acceptance Criteria**:
+- Chapter 1000-1500 words
+- Code example tested (runs on ROS 2 Humble)
+- Mermaid diagram renders correctly
+- No spelling/grammar errors
+
+**Gemini CLI Prompt**:
+```
+Write Chapter 1: ROS 2 Introduction
+
+Target audience: Beginners with Python experience
+Structure: Problem → Concept → Example → Exercise
+Tone: Educational, clear, encouraging
+
+Include:
+- What is ROS 2 and why it exists
+- Core architecture (nodes, topics, services)
+- First "Hello World" node (rclpy)
+- Mermaid diagram of node communication
+
+Length: 1000-1500 words
+Format: MDX (Docusaurus)
+```
+
+---
+
+#### Task 2.3: Write Module 1, Chapter 2-4
+**Duration**: 180 minutes (60 min each)  
+**Dependencies**: Task 2.2  
+**Type**: Content Creation  
+
+**What to do**:
+- Chapter 2: Building Your First Node
+- Chapter 3: Topics and Pub/Sub Pattern
+- Chapter 4: Services and Actions
+
+**Acceptance Criteria**:
+- Each chapter 1000-1500 words
+- All code examples tested
+- Follows same structure as Chapter 1
+
+---
+
+#### Task 2.4: Write Module 2 (Gazebo Simulation)
+**Duration**: 180 minutes  
+**Dependencies**: Task 2.3  
+**Type**: Content Creation  
+
+**What to do**:
+- Chapter 1: Gazebo Environment Setup
+- Chapter 2: URDF Robot Modeling
+- Chapter 3: Physics and Sensors
+
+**Acceptance Criteria**:
+- 3 chapters, each 1000-1500 words
+- URDF examples included
+- Simulation tutorials tested
+
+---
+
+#### Task 2.5: Write Module 3 (NVIDIA Isaac)
+**Duration**: 180 minutes  
+**Dependencies**: Task 2.4  
+**Type**: Content Creation  
+
+**What to do**:
+- Chapter 1: Isaac Sim Introduction
+- Chapter 2: Isaac ROS Perception
+- Chapter 3: Sim-to-Real Transfer
+
+**Acceptance Criteria**:
+- 3 chapters complete
+- USD format explained
+- Perception pipeline examples
+
+---
+
+#### Task 2.6: Write Module 4 (VLA)
+**Duration**: 120 minutes  
+**Dependencies**: Task 2.5  
+**Type**: Content Creation  
+
+**What to do**:
+- Chapter 1: Voice Commands (Whisper + LLM)
+- Chapter 2: Cognitive Planning
+
+**Acceptance Criteria**:
+- 2 chapters complete
+- Voice-to-action examples
+- LLM integration explained
+
+---
+
+#### Task 2.7: Configure Docusaurus Navigation
+**Duration**: 20 minutes  
+**Dependencies**: Task 2.6  
+**Type**: Configuration  
+
+**What to do**:
+- Edit `frontend/sidebars.ts` to structure modules/chapters
+- Configure `docusaurus.config.ts` (site title, base URL)
+- Test navigation (all links work)
+
+**Acceptance Criteria**:
+- Sidebar shows all 4 modules with chapters
+- Navigation functional
+- Mobile responsive
+
+---
+
+### Phase 3: RAG Chatbot Backend
+
+#### Task 3.1: Implement Embeddings Script
+**Duration**: 60 minutes  
+**Dependencies**: Task 2.7, Task 1.3  
+**Type**: Feature Implementation  
+
+**What to do**:
+- Create `backend/scripts/seed_vector_db.py`
+- Logic:
+  - Read all MDX files from frontend/docs/
+  - Parse content (remove frontmatter)
+  - Chunk text (500-1000 tokens per chunk)
+  - Generate embeddings (OpenAI text-embedding-3-small)
+  - Upload to Qdrant collection `book_chapters_en`
+
+**Acceptance Criteria**:
+- Script runs successfully
+- Qdrant collection created with N vectors (N = total chunks)
+- Payload includes: chapter_id, section_title, content, chunk_index
+
+**Validation**:
+```bash
+python backend/scripts/seed_vector_db.py
+# Check Qdrant dashboard: collection "book_chapters_en" exists with vectors
+```
+
+---
+
+#### Task 3.2: Implement Vector Search Service
+**Duration**: 45 minutes  
+**Dependencies**: Task 3.1  
+**Type**: Feature Implementation  
+
+**What to do**:
+- Create `backend/app/services/chatbot/vector_search.py`
+- Class: `VectorSearchService`
+- Method: `search(query_vector, limit=5, score_threshold=0.6)`
+- Logic:
+  - Query Qdrant with cosine similarity
+  - Filter by score > threshold
+  - Return top K results with metadata
+
+**Acceptance Criteria**:
+- Service queries Qdrant successfully
+- Returns results sorted by relevance
+- Handles empty results (returns [])
+
+---
+
+#### Task 3.3: Implement Context Builder
+**Duration**: 45 minutes  
+**Dependencies**: Task 3.2  
+**Type**: Feature Implementation  
+
+**What to do**:
+- Create `backend/app/services/chatbot/context_builder.py`
+- Class: `ContextBuilder`
+- Method: `build(search_results, selected_text, conversation_history, max_tokens=6000)`
+- Logic:
+  - Priority: selected text > conversation history > search results
+  - Format as: `[Source 1]\n{content}\n---\n[Source 2]...`
+  - Truncate if exceeds token limit
+
+**Acceptance Criteria**:
+- Context string formatted correctly
+- Token limit respected (use tiktoken)
+- Priority ordering works
+
+---
+
+#### Task 3.4: Implement RAG Engine
+**Duration**: 60 minutes  
+**Dependencies**: Task 3.3  
+**Type**: Feature Implementation  
+
+**What to do**:
+- Create `backend/app/services/chatbot/rag_engine.py`
+- Class: `RAGEngine`
+- Method: `process_query(message, context, conversation_history)`
+- Logic:
+  - Generate query embedding
+  - Search vector DB
+  - Build context
+  - Call OpenAI GPT-4
+  - Return answer + sources
+
+**Acceptance Criteria**:
+- Full pipeline works end-to-end
+- Handles errors (API limits, no results)
+- Returns structured response
+
+---
+
+#### Task 3.5: Create Chat API Endpoint
+**Duration**: 30 minutes  
+**Dependencies**: Task 3.4  
+**Type**: API Development  
+
+**What to do**:
+- Create `backend/app/api/v1/endpoints/chatbot.py`
+- Endpoint: `POST /api/v1/chat`
+- Request schema: `ChatRequest(message, context, conversation_history)`
+- Response schema: `ChatResponse(answer, sources, confidence)`
+- Logic:
+  - Validate request (Pydantic)
+  - Call RAG engine
+  - Return response
+
+**Acceptance Criteria**:
+- Endpoint accessible at POST /api/v1/chat
+- Request validation works
+- Returns 200 with valid response
+
+**Validation**:
+```bash
+curl -X POST http://localhost:8000/api/v1/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What is ROS 2?"}'
+# Should return JSON with answer and sources
+```
+
+---
+
+### Phase 4: Chatbot Frontend
+
+#### Task 4.1: Create ChatWidget Component
+**Duration**: 60 minutes  
+**Dependencies**: Task 3.5  
+**Type**: UI Development  
+
+**What to do**:
+- Create `frontend/src/components/Chatbot/ChatWidget.tsx`
+- Features:
+  - Floating button (bottom-right)
+  - Expandable chat panel
+  - Message list (user + assistant)
+  - Input field + send button
+  - Loading indicator
+
+**Acceptance Criteria**:
+- Component renders correctly
+- Button toggles panel open/closed
+- Messages display in correct order
+
+---
+
+#### Task 4.2: Implement useChatbot Hook
+**Duration**: 45 minutes  
+**Dependencies**: Task 4.1  
+**Type**: Logic Implementation  
+
+**What to do**:
+- Create `frontend/src/hooks/useChatbot.ts`
+- Features:
+  - State management (messages, loading, error)
+  - API client (calls POST /chat)
+  - Error handling (retry logic)
+
+**Acceptance Criteria**:
+- Hook manages chat state correctly
+- API calls succeed
+- Errors caught and displayed
+
+---
+
+#### Task 4.3: Implement Selected-Text Feature
+**Duration**: 30 minutes  
+**Dependencies**: Task 4.2  
+**Type**: Feature Enhancement  
+
+**What to do**:
+- Detect text selection (window.getSelection())
+- Keyboard shortcut (Ctrl+Q or Cmd+Q)
+- Pass selected text as context to API
+
+**Acceptance Criteria**:
+- Text selection detected
+- Keyboard shortcut works
+- Context passed to API correctly
+
+---
+
+#### Task 4.4: Style ChatWidget
+**Duration**: 45 minutes  
+**Dependencies**: Task 4.1  
+**Type**: Styling  
+
+**What to do**:
+- Create `frontend/src/components/Chatbot/ChatWidget.css`
+- Responsive design (desktop + mobile)
+- Match Docusaurus theme colors
+- Accessibility (keyboard navigation, focus indicators)
+
+**Acceptance Criteria**:
+- Mobile responsive (works on 375px width)
+- Colors match theme
+- WCAG 2.1 AA compliant
+
+---
+
+### Phase 5: Authentication System
+
+#### Task 5.1: Setup Better-auth Backend
+**Duration**: 60 minutes  
+**Dependencies**: Task 1.3  
+**Type**: Integration  
+
+**What to do**:
+- Install better-auth (or equivalent library)
+- Create `users` table in Neon (migration)
+- Configure JWT settings (15-min access, 7-day refresh)
+- Implement password hashing (bcrypt)
+
+**Acceptance Criteria**:
+- Better-auth configured
+- Database schema created
+- JWT tokens generated correctly
+
+---
+
+#### Task 5.2: Create Signup Endpoint
+**Duration**: 45 minutes  
+**Dependencies**: Task 5.1  
+**Type**: API Development  
+
+**What to do**:
+- Endpoint: `POST /api/v1/auth/signup`
+- Request: `{email, password, full_name, software_background, hardware_background}`
+- Logic:
+  - Validate email format, password strength
+  - Hash password
+  - Insert user into database
+  - Return JWT tokens
+
+**Acceptance Criteria**:
+- Endpoint validates input correctly
+- Passwords hashed (never stored plain-text)
+- Returns access + refresh tokens
+
+---
+
+#### Task 5.3: Create Login Endpoint
+**Duration**: 30 minutes  
+**Dependencies**: Task 5.1  
+**Type**: API Development  
+
+**What to do**:
+- Endpoint: `POST /api/v1/auth/login`
+- Request: `{email, password}`
+- Logic:
+  - Verify credentials
+  - Return JWT tokens
+  - Update last_login timestamp
+
+**Acceptance Criteria**:
+- Endpoint verifies credentials
+- Returns tokens on success
+- Returns 401 on invalid credentials
+
+---
+
+#### Task 5.4: Create Auth UI (Frontend)
+**Duration**: 60 minutes  
+**Dependencies**: Task 5.2, 5.3  
+**Type**: UI Development  
+
+**What to do**:
+- Create `LoginModal` component (signup/login forms)
+- Create `ProfileButton` component (user menu in navbar)
+- Implement token storage (localStorage or HttpOnly cookies)
+
+**Acceptance Criteria**:
+- Forms validate input
+- API calls succeed
+- Tokens stored securely
+
+---
+
+#### Task 5.5: Implement Token Refresh
+**Duration**: 30 minutes  
+**Dependencies**: Task 5.4  
+**Type**: Logic Implementation  
+
+**What to do**:
+- Axios interceptor catches 401 responses
+- Attempts token refresh
+- Retries original request
+
+**Acceptance Criteria**:
+- Expired tokens refreshed automatically
+- Original request succeeds after refresh
+
+---
+
+### Phase 6: Personalization Engine
+
+#### Task 6.1: Design Personalization Prompt
+**Duration**: 30 minutes  
+**Dependencies**: Task 5.5  
+**Type**: Prompt Engineering  
+
+**What to do**:
+- Create prompt template for content adaptation
+- Test with sample chapter + user background
+- Iterate until output quality is good
+
+**Acceptance Criteria**:
+- Prompt adapts content correctly
+- Technical accuracy maintained
+- Examples match user level
+
+---
+
+#### Task 6.2: Implement Personalization Service
+**Duration**: 45 minutes  
+**Dependencies**: Task 6.1  
+**Type**: Feature Implementation  
+
+**What to do**:
+- Create `backend/app/services/personalization_service.py`
+- Method: `personalize_content(chapter_content, user_background, level)`
+- Logic:
+  - Call OpenAI GPT-4 with personalization prompt
+  - Return adapted markdown
+
+**Acceptance Criteria**:
+- Service adapts content correctly
+- Response time < 5 seconds
+
+---
+
+#### Task 6.3: Create Personalization API Endpoint
+**Duration**: 30 minutes  
+**Dependencies**: Task 6.2  
+**Type**: API Development  
+
+**What to do**:
+- Endpoint: `POST /api/v1/personalize`
+- Request: `{chapter_id, personalization_level}`
+- Requires authentication
+
+**Acceptance Criteria**:
+- Endpoint requires auth
+- Returns personalized markdown
+
+---
+
+#### Task 6.4: Create PersonalizeButton Component
+**Duration**: 45 minutes  
+**Dependencies**: Task 6.3  
+**Type**: UI Development  
+
+**What to do**:
+- Create button visible only when authenticated
+- Dropdown: Beginner / Intermediate / Advanced
+- Calls API, replaces chapter content
+- "Reset to Original" button
+
+**Acceptance Criteria**:
+- Button appears for logged-in users
+- Personalization works correctly
+- Reset button restores original
+
+---
+
+### Phase 7: Translation System
+
+#### Task 7.1: Design Translation Prompt
+**Duration**: 30 minutes  
+**Dependencies**: None  
+**Type**: Prompt Engineering  
+
+**What to do**:
+- Create prompt template for Urdu translation
+- Rules: Keep technical terms in English, maintain formatting
+- Test with sample chapter
+
+**Acceptance Criteria**:
+- Translation quality is good
+- Technical terms preserved
+- Formatting maintained
+
+---
+
+#### Task 7.2: Implement Translation Service
+**Duration**: 45 minutes  
+**Dependencies**: Task 7.1  
+**Type**: Feature Implementation  
+
+**What to do**:
+- Create `backend/app/services/translation_service.py`
+- Method: `translate_content(chapter_content, target_language)`
+- Logic:
+  - Call OpenAI GPT-4 with translation prompt
+  - Return translated markdown
+
+**Acceptance Criteria**:
+- Service translates correctly
+- Response time < 5 seconds
+
+---
+
+#### Task 7.3: Create Translation API Endpoint
+**Duration**: 30 minutes  
+**Dependencies**: Task 7.2  
+**Type**: API Development  
+
+**What to do**:
+- Endpoint: `POST /api/v1/translate`
+- Request: `{chapter_id, target_language}`
+
+**Acceptance Criteria**:
+- Endpoint returns translated markdown
+
+---
+
+#### Task 7.4: Create TranslateButton Component
+**Duration**: 45 minutes  
+**Dependencies**: Task 7.3  
+**Type**: UI Development  
+
+**What to do**:
+- Create button to toggle English/Urdu
+- Apply RTL layout (CSS direction: rtl)
+- Code blocks remain LTR
+
+**Acceptance Criteria**:
+- Translation works correctly
+- RTL layout applied
+- Code blocks unchanged
+
+---
+
+### Phase 8: Testing & QA
+
+#### Task 8.1: Write Backend Unit Tests
+**Duration**: 90 minutes  
+**Dependencies**: All backend tasks  
+**Type**: Testing  
+
+**What to do**:
+- Test RAG pipeline components
+- Test auth service (signup, login)
+- Test personalization service
+- Target: 80% coverage
+
+**Acceptance Criteria**:
+- pytest runs successfully
+- Coverage > 80%
+
+---
+
+#### Task 8.2: Write Frontend Component Tests
+**Duration**: 90 minutes  
+**Dependencies**: All frontend tasks  
+**Type**: Testing  
+
+**What to do**:
+- Test ChatWidget interactions
+- Test auth forms
+- Test personalization button
+- Target: 70% coverage
+
+**Acceptance Criteria**:
+- Jest tests pass
+- Coverage > 70%
+
+---
+
+#### Task 8.3: Run Lighthouse Audit
+**Duration**: 30 minutes  
+**Dependencies**: All frontend tasks  
+**Type**: Quality Check  
+
+**What to do**:
+- Run Lighthouse on deployed site
+- Fix issues to meet targets:
+  - Performance > 85
+  - Accessibility 100
+  - Best Practices > 95
+
+**Acceptance Criteria**:
+- Lighthouse scores meet targets
+
+---
+
+#### Task 8.4: Security Audit
+**Duration**: 30 minutes  
+**Dependencies**: All tasks  
+**Type**: Security Check  
+
+**What to do**:
+- Run `npm audit` and fix vulnerabilities
+- Run `safety check` on Python dependencies
+- Manual review for SQL injection, XSS, CSRF
+
+**Acceptance Criteria**:
+- Zero critical/high vulnerabilities
+
+---
+
+### Phase 9: Deployment
+
+#### Task 9.1: Deploy Frontend to GitHub Pages
+**Duration**: 30 minutes  
+**Dependencies**: Task 8.3  
+**Type**: Deployment  
+
+**What to do**:
+- Configure GitHub Actions workflow
+- Build Docusaurus
+- Deploy to gh-pages branch
+
+**Acceptance Criteria**:
+- Site accessible at GitHub Pages URL
+
+---
+
+#### Task 9.2: Deploy Backend to Railway
+**Duration**: 45 minutes  
+**Dependencies**: Task 8.4  
+**Type**: Deployment  
+
+**What to do**:
+- Connect GitHub repo to Railway
+- Configure environment variables
+- Deploy backend
+
+**Acceptance Criteria**:
+- Backend accessible at Railway URL
+- All endpoints work in production
+
+---
+
+#### Task 9.3: Configure Production CORS
+**Duration**: 15 minutes  
+**Dependencies**: Task 9.1, 9.2  
+**Type**: Configuration  
+
+**What to do**:
+- Update CORS settings to allow frontend domain only
+- Test API calls from production frontend
+
+**Acceptance Criteria**:
+- No CORS errors in production
+
+---
+
+#### Task 9.4: Setup Monitoring
+**Duration**: 30 minutes  
+**Dependencies**: Task 9.2  
+**Type**: Monitoring  
+
+**What to do**:
+- Configure Sentry for error tracking
+- Test error reporting
+
+**Acceptance Criteria**:
+- Errors logged to Sentry
+
+---
+
+### Phase 10: Reusable Intelligence
+
+#### Task 10.1: Create RAG Implementation Skill
+**Duration**: 45 minutes  
+**Dependencies**: Task 3.4  
+**Type**: Intelligence Creation  
+
+**What to do**:
+- Design skill for "Implement RAG Pipeline"
+- Document in `history/prompts/001-rag-skill.md`
+
+**Acceptance Criteria**:
+- Skill tested with Gemini CLI
+- PHR documents what worked
+
+---
+
+#### Task 10.2: Create Auth Integration Skill
+**Duration**: 45 minutes  
+**Dependencies**: Task 5.5  
+**Type**: Intelligence Creation  
+
+**What to do**:
+- Design skill for "Implement Better-auth Integration"
+- Document in `history/prompts/002-auth-skill.md`
+
+**Acceptance Criteria**:
+- Skill tested with Gemini CLI
+- PHR documents prompts that succeeded
+
+---
+
+#### Task 10.3: Create Content Writer Subagent
+**Duration**: 60 minutes  
+**Dependencies**: Task 2.7  
+**Type**: Intelligence Creation  
+
+**What to do**:
+- Design subagent specialized in technical writing
+- Persona: Technical educator, pedagogical expert
+- Test with sample chapter
+
+**Acceptance Criteria**:
+- Subagent generates quality chapter content
+- PHR documents usage patterns
+
+---
+
+## Task Summary
+
+**Total Tasks**: 53  
+**Estimated Time**: 90-120 hours  
+
+**Critical Path** (Base Deliverable):
+- Phase 1: 4 tasks (2 hours)
+- Phase 2: 7 tasks (12 hours)
+- Phase 3: 5 tasks (5 hours)
+- Phase 4: 4 tasks (4 hours)
+- Phase 8: 4 tasks (5 hours)
+- Phase 9: 4 tasks (2 hours)
+**Total**: 30 hours minimum for base deliverable
+
+**Bonus Features**:
+- Phase 5: 5 tasks (5 hours)
+- Phase 6: 4 tasks (4 hours)
+- Phase 7: 4 tasks (4 hours)
+- Phase 10: 3 tasks (4 hours)
+**Total**: +17 hours for all bonuses
+
+---
+
+## Task Execution Order
+
+**Week 1** (30-40 hours):
+- Days 1-2: Phase 1 (Foundation)
+- Days 3-5: Phase 2 (Content Creation)
+- Days 6-7: Phase 3 (RAG Backend)
+
+**Week 2** (30-40 hours):
+- Days 1-2: Phase 4 (Chatbot Frontend)
+- Days 3-4: Phase 5 (Authentication)
+- Day 5: Phase 6 (Personalization)
+- Day 6: Phase 7 (Translation)
+- Day 7: Phase 8 (Testing)
+
+**Week 3** (20-30 hours):
+- Day 1: Phase 8 (Testing continued)
+- Day 2: Phase 9 (Deployment)
+- Day 3: Phase 10 (Reusable Intelligence)
+- Days 4-5: Buffer for debugging, documentation
+- Days 6-7: Final testing, demo video, submission
+
+---
+
+## Checkpoint Strategy
+
+**Checkpoint 1** (After Phase 1):
+- Validate: All external APIs connected
+- Decision: Proceed to content creation
+
+**Checkpoint 2** (After Phase 2):
+- Validate: All chapters written and reviewed
+- Decision: Proceed to RAG backend
+
+**Checkpoint 3** (After Phase 4):
+- Validate: Chatbot functional end-to-end
+- Decision: Base deliverable complete, start bonuses or submit
+
+**Checkpoint 4** (After Phase 7):
+- Validate: All bonus features working
+- Decision: Proceed to testing and deployment
+
+**Checkpoint 5** (After Phase 9):
+- Validate: Production deployment successful
+- Decision: Create demo video, submit project

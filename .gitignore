@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+.venv
+
+# Node
+node_modules/
+.DS_Store
+
+# Docusaurus
+.docusaurus/
+.cache-loader/
+build/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Gemini CLI settings
+.gemini/settings.json

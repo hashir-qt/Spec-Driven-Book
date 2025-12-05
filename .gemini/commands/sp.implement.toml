@@ -1,164 +1,892 @@
-description = "Execute the implementation plan by processing and executing all tasks defined in tasks.md"
+# Implementation Checklist: Physical AI Book with RAG Chatbot
 
-prompt = """
+**Version**: 1.0.0  
+**Purpose**: Checkpoint validation for each implementation phase  
+**Created**: 2024-12-06  
+
 ---
-description: Execute the implementation plan by processing and executing all tasks defined in tasks.md
+
+## How to Use This Checklist
+
+At each checkpoint:
+1. **Review** - Go through checklist items for completed phase
+2. **Validate** - Test each criterion (run commands, inspect output)
+3. **Decide** - Mark items as ✅ (pass) or ❌ (fail)
+4. **Fix** - If any ❌, stop and fix before proceeding
+5. **Commit** - Once all ✅, commit phase to git
+6. **Continue** - Proceed to next phase
+
+**Rule**: Never proceed with ❌ items. Fix them first.
+
 ---
 
-## User Input
+## Checkpoint 1: Foundation Setup
 
-```text
-$ARGUMENTS
+**When**: After Phase 1 tasks (1.1-1.4)  
+**Time to validate**: 15 minutes  
+**Criteria for proceeding**: All ✅  
+
+### Validation Steps
+
+#### 1.1 Project Structure
+- [ ] Run `tree -L 2` in project root
+- [ ] Verify directories exist:
+  - [ ] `frontend/` with `package.json`
+  - [ ] `backend/` with `app/` subdirectory
+  - [ ] `.specify/memory/` with `constitution.md`
+  - [ ] `specs/` directory
+  - [ ] `history/` directory
+
+#### 1.2 Environment Configuration
+- [ ] Check `.env.example` files exist:
+  - [ ] `backend/.env.example` has all required vars
+  - [ ] `frontend/.env.example` has API URL
+- [ ] Check `.gitignore` includes:
+  - [ ] `.env`
+  - [ ] `node_modules/`
+  - [ ] `__pycache__/`
+  - [ ] `*.pyc`
+
+#### 1.3 Frontend Running
+```bash
+cd frontend
+npm install
+npm start
+```
+- [ ] Docusaurus starts without errors
+- [ ] Opens at http://localhost:3000
+- [ ] Default page renders correctly
+- [ ] Navigation works (sidebar, top nav)
+
+#### 1.4 Backend Running
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # or venv\Scripts\activate on Windows
+pip install -r requirements/base.txt
+uvicorn app.main:app --reload
+```
+- [ ] FastAPI starts without errors
+- [ ] Docs available at http://localhost:8000/docs
+- [ ] /health endpoint returns 200 OK
+- [ ] OpenAPI schema displayed
+
+#### 1.5 External API Connections
+```bash
+cd backend
+python scripts/test_connections.py
+```
+- [ ] OpenAI API: Connection successful
+- [ ] OpenAI: Returns 1536-dimensional embedding
+- [ ] Qdrant: Connection successful
+- [ ] Qdrant: Can list collections
+- [ ] Neon Postgres: Connection successful
+- [ ] Neon: Simple query returns result
+
+#### 1.6 Documentation Complete
+- [ ] README.md exists with:
+  - [ ] Project overview
+  - [ ] Prerequisites listed
+  - [ ] Setup instructions (step-by-step)
+  - [ ] How to run frontend/backend
+  - [ ] Troubleshooting section
+- [ ] CONTRIBUTING.md exists with:
+  - [ ] Git workflow explained
+  - [ ] Commit message format (Conventional Commits)
+  - [ ] Code style guide
+
+### Decision Point
+
+**All items ✅?**  
+→ **Proceed to Phase 2 (Content Creation)**
+
+**Any items ❌?**  
+→ **STOP. Fix issues. Re-validate. Do not proceed.**
+
+---
+
+## Checkpoint 2: Book Content Complete
+
+**When**: After Phase 2 tasks (2.1-2.7)  
+**Time to validate**: 30 minutes  
+**Criteria for proceeding**: All ✅  
+
+### Validation Steps
+
+#### 2.1 Content Structure
+- [ ] Check chapter files exist:
+  ```bash
+  ls frontend/docs/module-1-ros2/*.md  # Should list 4 chapters
+  ls frontend/docs/module-2-gazebo/*.md  # Should list 3 chapters
+  ls frontend/docs/module-3-isaac/*.md  # Should list 3 chapters
+  ls frontend/docs/module-4-vla/*.md  # Should list 2 chapters
+  ```
+- [ ] Total chapters: Minimum 12 ✅
+
+#### 2.2 Content Quality
+**For each chapter, verify**:
+- [ ] Word count: 1000-3000 words (use `wc -w filename.md`)
+- [ ] Code examples present (at least 1 per chapter)
+- [ ] Code examples complete (no `... (code here)` placeholders)
+- [ ] Mermaid diagrams render correctly (check in Docusaurus)
+- [ ] No spelling errors (run spell checker)
+- [ ] No grammar errors (use Grammarly or similar)
+
+#### 2.3 Code Examples Tested
+**For Module 1 (ROS 2)**:
+- [ ] Chapter 1 example: Runs without errors
+- [ ] Chapter 2 example: Runs without errors
+- [ ] Chapter 3 example: Publisher/subscriber works
+- [ ] Chapter 4 example: Service/action works
+
+**For Module 2 (Gazebo)**:
+- [ ] Examples reference correct Gazebo version
+- [ ] URDF examples validate (no syntax errors)
+
+**For Module 3 (Isaac)**:
+- [ ] Examples reference correct Isaac Sim version
+- [ ] USD format explained correctly
+
+**For Module 4 (VLA)**:
+- [ ] Voice command example clear
+- [ ] LLM integration example clear
+
+#### 2.4 Navigation Configured
+```bash
+cd frontend
+npm start
+```
+- [ ] Sidebar shows all 4 modules
+- [ ] Each module expands to show chapters
+- [ ] Clicking chapter navigates correctly
+- [ ] Search bar functional (finds chapters)
+- [ ] Mobile responsive (test on 375px width)
+
+#### 2.5 Docusaurus Configuration
+- [ ] Check `docusaurus.config.ts`:
+  - [ ] Site title set correctly
+  - [ ] Base URL configured
+  - [ ] Theme colors customized (optional)
+- [ ] Check `sidebars.ts`:
+  - [ ] All modules listed
+  - [ ] All chapters under correct module
+
+### Decision Point
+
+**All items ✅?**  
+→ **Proceed to Phase 3 (RAG Backend)**
+
+**Any items ❌?**  
+→ **STOP. Fix content issues. Re-validate.**
+
+---
+
+## Checkpoint 3: RAG Backend Functional
+
+**When**: After Phase 3 tasks (3.1-3.5)  
+**Time to validate**: 30 minutes  
+**Criteria for proceeding**: All ✅  
+
+### Validation Steps
+
+#### 3.1 Vector Database Populated
+```bash
+# Check Qdrant Cloud dashboard or run:
+cd backend
+python scripts/check_qdrant.py  # (Create this test script)
+```
+- [ ] Collection `book_chapters_en` exists
+- [ ] Vector count > 0 (should be ~50-200 depending on chapters)
+- [ ] Sample vector has correct payload:
+  - [ ] `chapter_id` field present
+  - [ ] `section_title` field present
+  - [ ] `content` field present
+  - [ ] `chunk_index` field present
+
+#### 3.2 API Endpoint Accessible
+```bash
+# Test with curl
+curl -X POST http://localhost:8000/api/v1/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What is ROS 2?"}'
+```
+- [ ] Returns 200 OK
+- [ ] Response is valid JSON
+- [ ] Response has `answer` field
+- [ ] Response has `sources` array
+- [ ] Response has `confidence` field
+
+#### 3.3 RAG Pipeline Working
+**Test Query 1: Basic Question**
+```json
+{
+  "message": "What are ROS 2 nodes?"
+}
+```
+- [ ] Response contains definition of ROS 2 nodes
+- [ ] Response cites specific chapter (e.g., "Module 1, Chapter 1")
+- [ ] Confidence score > 0.6
+- [ ] Sources array has 1-5 entries
+
+**Test Query 2: Off-Topic**
+```json
+{
+  "message": "What's the weather today?"
+}
+```
+- [ ] Response declines to answer
+- [ ] Message says something like "I can only answer about book content"
+
+**Test Query 3: No Results**
+```json
+{
+  "message": "Explain quantum computing in ROS 2"
+}
+```
+- [ ] Response says "This topic isn't covered"
+- [ ] Or similar message indicating no relevant content
+
+**Test Query 4: Selected Text Context**
+```json
+{
+  "message": "Explain this in simpler terms",
+  "context": "Gazebo simulates rigid body dynamics using physics engines"
+}
+```
+- [ ] Response references the selected text
+- [ ] Response provides simplified explanation
+
+#### 3.4 Performance Check
+```bash
+# Test response time (use time command or Postman)
+time curl -X POST http://localhost:8000/api/v1/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What is ROS 2?"}'
+```
+- [ ] Response time < 3 seconds (P95)
+- [ ] Breakdown (approximate):
+  - [ ] Embedding generation: < 500ms
+  - [ ] Vector search: < 300ms
+  - [ ] OpenAI chat: < 2s
+
+#### 3.5 Error Handling
+**Test Error Scenario 1: Invalid Request**
+```bash
+curl -X POST http://localhost:8000/api/v1/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": ""}'  # Empty message
+```
+- [ ] Returns 422 Unprocessable Entity
+- [ ] Error message is clear (e.g., "message cannot be empty")
+
+**Test Error Scenario 2: OpenAI API Failure**
+- [ ] Temporarily set invalid OpenAI API key
+- [ ] Send query
+- [ ] Returns 500 Internal Server Error
+- [ ] Error message: "AI service temporarily unavailable"
+
+### Decision Point
+
+**All items ✅?**  
+→ **Proceed to Phase 4 (Chatbot Frontend)**
+
+**Any items ❌?**  
+→ **STOP. Fix RAG pipeline. Re-validate.**
+
+---
+
+## Checkpoint 4: Chatbot Frontend Functional
+
+**When**: After Phase 4 tasks (4.1-4.4)  
+**Time to validate**: 20 minutes  
+**Criteria for proceeding**: All ✅  
+
+### Validation Steps
+
+#### 4.1 UI Rendering
+```bash
+cd frontend
+npm start
+```
+- [ ] Chatbot floating button visible (bottom-right corner)
+- [ ] Clicking button opens chat panel
+- [ ] Chat panel has:
+  - [ ] Message history area
+  - [ ] Input field
+  - [ ] Send button
+  - [ ] Close button
+
+#### 4.2 Chat Interaction
+**Test 1: Send Message**
+- [ ] Type "What is ROS 2?" in input field
+- [ ] Click send button
+- [ ] User message appears in chat
+- [ ] Loading indicator shows
+- [ ] Assistant response appears within 3 seconds
+- [ ] Sources displayed below response
+- [ ] Sources are clickable links
+
+**Test 2: Follow-up Message**
+- [ ] Send "What is ROS 2?"
+- [ ] Then send "How do nodes communicate?"
+- [ ] Second response understands context ("nodes" refers to "ROS 2 nodes")
+
+**Test 3: Selected Text**
+- [ ] Highlight text on page (e.g., "ROS 2 is a middleware...")
+- [ ] Press Ctrl+Q (or Cmd+Q on Mac)
+- [ ] Chatbot opens with highlighted text visible
+- [ ] Ask question about selected text
+- [ ] Response references selected text
+
+#### 4.3 Error Handling
+**Test 1: Network Error**
+- [ ] Stop backend server
+- [ ] Send message in chat
+- [ ] Error message displays: "Failed to connect to server"
+- [ ] No console errors
+
+**Test 2: Invalid Response**
+- [ ] (If possible, mock invalid API response)
+- [ ] Error message displays clearly
+
+#### 4.4 Mobile Responsiveness
+```bash
+# Open DevTools, toggle device toolbar (Ctrl+Shift+M)
+# Set viewport to 375px (iPhone SE)
+```
+- [ ] Chatbot button visible and clickable
+- [ ] Chat panel expands correctly (full-screen or overlay)
+- [ ] Input field functional (keyboard opens)
+- [ ] Send button accessible
+- [ ] Messages scroll correctly
+
+#### 4.5 Accessibility
+- [ ] Tab navigation works (can reach button, input, send)
+- [ ] Enter key sends message
+- [ ] Escape key closes chat panel
+- [ ] Screen reader announces messages (test with NVDA/JAWS)
+- [ ] Focus indicators visible
+
+### Decision Point
+
+**All items ✅?**  
+→ **BASE DELIVERABLE COMPLETE! Option: Proceed to Phase 5 (Auth) for bonus points, OR skip to Phase 8 (Testing)**
+
+**Any items ❌?**  
+→ **STOP. Fix chatbot UI. Re-validate.**
+
+---
+
+## Checkpoint 5: Authentication Functional
+
+**When**: After Phase 5 tasks (5.1-5.5)  
+**Time to validate**: 20 minutes  
+**Criteria for proceeding**: All ✅  
+
+### Validation Steps
+
+#### 5.1 Signup Flow
+**Test in UI:**
+- [ ] Click "Sign Up" button (should open modal/form)
+- [ ] Fill form:
+  - [ ] Email: test@example.com
+  - [ ] Password: SecureP@ss123
+  - [ ] Full Name: Test User
+  - [ ] Software Background: Python (Intermediate), ROS 2 (Beginner)
+  - [ ] Hardware Background: Robotics (Beginner)
+- [ ] Click "Sign Up"
+- [ ] Account created (check database)
+- [ ] JWT tokens returned
+- [ ] Redirected to homepage
+- [ ] "Profile" button visible in navbar
+
+**Validation Checks:**
+```bash
+# Check database
+psql $DATABASE_URL -c "SELECT email, software_background FROM users WHERE email='test@example.com';"
+```
+- [ ] User exists in database
+- [ ] Password is hashed (not plain text)
+- [ ] Background fields stored as JSONB
+
+#### 5.2 Login Flow
+**Test in UI:**
+- [ ] Logout (if signed in)
+- [ ] Click "Login" button
+- [ ] Enter email: test@example.com
+- [ ] Enter password: SecureP@ss123
+- [ ] Click "Login"
+- [ ] JWT tokens returned
+- [ ] User authenticated
+- [ ] "Profile" button visible
+
+**Test Invalid Login:**
+- [ ] Enter wrong password
+- [ ] Click "Login"
+- [ ] Error message: "Invalid credentials"
+- [ ] No tokens returned
+
+#### 5.3 Token Refresh
+**Test Token Expiry:**
+- [ ] Login successfully
+- [ ] Wait 16 minutes (access token expires after 15 min)
+- [ ] Send chatbot query (requires auth in future phases)
+- [ ] Request should succeed (token auto-refreshed)
+- [ ] No logout or re-login required
+
+**Manual Test:**
+```bash
+# Get access token from browser DevTools (Application > Local Storage)
+# Manually expire it (change timestamp in JWT payload)
+# Send API request
+curl -X GET http://localhost:8000/api/v1/auth/me \
+  -H "Authorization: Bearer {expired_token}"
+# Should return 401
+# Frontend should auto-refresh and retry
 ```
 
-You **MUST** consider the user input before proceeding (if not empty).
+#### 5.4 Logout
+- [ ] Click "Logout" button
+- [ ] Tokens cleared from storage
+- [ ] "Profile" button disappears
+- [ ] "Login" button appears
 
-## Outline
+#### 5.5 Security Validation
+- [ ] Check password storage:
+  ```bash
+  psql $DATABASE_URL -c "SELECT hashed_password FROM users LIMIT 1;"
+  # Should NOT be plain text (should be bcrypt hash starting with $2b$)
+  ```
+- [ ] Check JWT secret is not exposed:
+  ```bash
+  grep -r "JWT_SECRET" backend/app/
+  # Should only reference os.getenv(), never hardcoded
+  ```
 
-1. Run `.specify/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks` from repo root and parse FEATURE_DIR and AVAILABLE_DOCS list. All paths must be absolute. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\\''m Groot' (or double-quote if possible: "I'm Groot").
+### Decision Point
 
-2. **Check checklists status** (if FEATURE_DIR/checklists/ exists):
-   - Scan all checklist files in the checklists/ directory
-   - For each checklist, count:
-     - Total items: All lines matching `- [ ]` or `- [X]` or `- [x]`
-     - Completed items: Lines matching `- [X]` or `- [x]`
-     - Incomplete items: Lines matching `- [ ]`
-   - Create a status table:
+**All items ✅?**  
+→ **Proceed to Phase 6 (Personalization)**
 
-     ```text
-     | Checklist | Total | Completed | Incomplete | Status |
-     |-----------|-------|-----------|------------|--------|
-     | ux.md     | 12    | 12        | 0          | ✓ PASS |
-     | test.md   | 8     | 5         | 3          | ✗ FAIL |
-     | security.md | 6   | 6         | 0          | ✓ PASS |
-     ```
-
-   - Calculate overall status:
-     - **PASS**: All checklists have 0 incomplete items
-     - **FAIL**: One or more checklists have incomplete items
-
-   - **If any checklist is incomplete**:
-     - Display the table with incomplete item counts
-     - **STOP** and ask: "Some checklists are incomplete. Do you want to proceed with implementation anyway? (yes/no)"
-     - Wait for user response before continuing
-     - If user says "no" or "wait" or "stop", halt execution
-     - If user says "yes" or "proceed" or "continue", proceed to step 3
-
-   - **If all checklists are complete**:
-     - Display the table showing all checklists passed
-     - Automatically proceed to step 3
-
-3. Load and analyze the implementation context:
-   - **REQUIRED**: Read tasks.md for the complete task list and execution plan
-   - **REQUIRED**: Read plan.md for tech stack, architecture, and file structure
-   - **IF EXISTS**: Read data-model.md for entities and relationships
-   - **IF EXISTS**: Read contracts/ for API specifications and test requirements
-   - **IF EXISTS**: Read research.md for technical decisions and constraints
-   - **IF EXISTS**: Read quickstart.md for integration scenarios
-
-4. **Project Setup Verification**:
-   - **REQUIRED**: Create/verify ignore files based on actual project setup:
-
-   **Detection & Creation Logic**:
-   - Check if the following command succeeds to determine if the repository is a git repo (create/verify .gitignore if so):
-
-     ```sh
-     git rev-parse --git-dir 2>/dev/null
-     ```
-
-   - Check if Dockerfile* exists or Docker in plan.md → create/verify .dockerignore
-   - Check if .eslintrc*or eslint.config.* exists → create/verify .eslintignore
-   - Check if .prettierrc* exists → create/verify .prettierignore
-   - Check if .npmrc or package.json exists → create/verify .npmignore (if publishing)
-   - Check if terraform files (*.tf) exist → create/verify .terraformignore
-   - Check if .helmignore needed (helm charts present) → create/verify .helmignore
-
-   **If ignore file already exists**: Verify it contains essential patterns, append missing critical patterns only
-   **If ignore file missing**: Create with full pattern set for detected technology
-
-   **Common Patterns by Technology** (from plan.md tech stack):
-   - **Node.js/JavaScript/TypeScript**: `node_modules/`, `dist/`, `build/`, `*.log`, `.env*`
-   - **Python**: `__pycache__/`, `*.pyc`, `.venv/`, `venv/`, `dist/`, `*.egg-info/`
-   - **Java**: `target/`, `*.class`, `*.jar`, `.gradle/`, `build/`
-   - **C#/.NET**: `bin/`, `obj/`, `*.user`, `*.suo`, `packages/`
-   - **Go**: `*.exe`, `*.test`, `vendor/`, `*.out`
-   - **Ruby**: `.bundle/`, `log/`, `tmp/`, `*.gem`, `vendor/bundle/`
-   - **PHP**: `vendor/`, `*.log`, `*.cache`, `*.env`
-   - **Rust**: `target/`, `debug/`, `release/`, `*.rs.bk`, `*.rlib`, `*.prof*`, `.idea/`, `*.log`, `.env*`
-   - **Kotlin**: `build/`, `out/`, `.gradle/`, `.idea/`, `*.class`, `*.jar`, `*.iml`, `*.log`, `.env*`
-   - **C++**: `build/`, `bin/`, `obj/`, `out/`, `*.o`, `*.so`, `*.a`, `*.exe`, `*.dll`, `.idea/`, `*.log`, `.env*`
-   - **C**: `build/`, `bin/`, `obj/`, `out/`, `*.o`, `*.a`, `*.so`, `*.exe`, `Makefile`, `config.log`, `.idea/`, `*.log`, `.env*`
-   - **Swift**: `.build/`, `DerivedData/`, `*.swiftpm/`, `Packages/`
-   - **R**: `.Rproj.user/`, `.Rhistory`, `.RData`, `.Ruserdata`, `*.Rproj`, `packrat/`, `renv/`
-   - **Universal**: `.DS_Store`, `Thumbs.db`, `*.tmp`, `*.swp`, `.vscode/`, `.idea/`
-
-   **Tool-Specific Patterns**:
-   - **Docker**: `node_modules/`, `.git/`, `Dockerfile*`, `.dockerignore`, `*.log*`, `.env*`, `coverage/`
-   - **ESLint**: `node_modules/`, `dist/`, `build/`, `coverage/`, `*.min.js`
-   - **Prettier**: `node_modules/`, `dist/`, `build/`, `coverage/`, `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`
-   - **Terraform**: `.terraform/`, `*.tfstate*`, `*.tfvars`, `.terraform.lock.hcl`
-   - **Kubernetes/k8s**: `*.secret.yaml`, `secrets/`, `.kube/`, `kubeconfig*`, `*.key`, `*.crt`
-
-5. Parse tasks.md structure and extract:
-   - **Task phases**: Setup, Tests, Core, Integration, Polish
-   - **Task dependencies**: Sequential vs parallel execution rules
-   - **Task details**: ID, description, file paths, parallel markers [P]
-   - **Execution flow**: Order and dependency requirements
-
-6. Execute implementation following the task plan:
-   - **Phase-by-phase execution**: Complete each phase before moving to the next
-   - **Respect dependencies**: Run sequential tasks in order, parallel tasks [P] can run together  
-   - **Follow TDD approach**: Execute test tasks before their corresponding implementation tasks
-   - **File-based coordination**: Tasks affecting the same files must run sequentially
-   - **Validation checkpoints**: Verify each phase completion before proceeding
-
-7. Implementation execution rules:
-   - **Setup first**: Initialize project structure, dependencies, configuration
-   - **Tests before code**: If you need to write tests for contracts, entities, and integration scenarios
-   - **Core development**: Implement models, services, CLI commands, endpoints
-   - **Integration work**: Database connections, middleware, logging, external services
-   - **Polish and validation**: Unit tests, performance optimization, documentation
-
-8. Progress tracking and error handling:
-   - Report progress after each completed task
-   - Halt execution if any non-parallel task fails
-   - For parallel tasks [P], continue with successful tasks, report failed ones
-   - Provide clear error messages with context for debugging
-   - Suggest next steps if implementation cannot proceed
-   - **IMPORTANT** For completed tasks, make sure to mark the task off as [X] in the tasks file.
-
-9. Completion validation:
-   - Verify all required tasks are completed
-   - Check that implemented features match the original specification
-   - Validate that tests pass and coverage meets requirements
-   - Confirm the implementation follows the technical plan
-   - Report final status with summary of completed work
-
-Note: This command assumes a complete task breakdown exists in tasks.md. If tasks are incomplete or missing, suggest running `/sp.tasks` first to regenerate the task list.
+**Any items ❌?**  
+→ **STOP. Fix auth issues. Re-validate.**
 
 ---
 
-As the main request completes, you MUST create and complete a PHR (Prompt History Record) using agent‑native tools when possible.
+## Checkpoint 6: Personalization Functional
 
-1) Determine Stage
-   - Stage: constitution | spec | plan | tasks | red | green | refactor | explainer | misc | general
+**When**: After Phase 6 tasks (6.1-6.4)  
+**Time to validate**: 20 minutes  
+**Criteria for proceeding**: All ✅  
 
-2) Generate Title and Determine Routing:
-   - Generate Title: 3–7 words (slug for filename)
-   - Route is automatically determined by stage:
-     - `constitution` → `history/prompts/constitution/`
-     - Feature stages → `history/prompts/<feature-name>/` (spec, plan, tasks, red, green, refactor, explainer, misc)
-     - `general` → `history/prompts/general/`
+### Validation Steps
 
-3) Create and Fill PHR (Shell first; fallback agent‑native)
-   - Run: `.specify/scripts/bash/create-phr.sh --title "<title>" --stage <stage> [--feature <name>] --json`
-   - Open the file and fill remaining placeholders (YAML + body), embedding full PROMPT_TEXT (verbatim) and concise RESPONSE_TEXT.
-   - If the script fails:
-     - Read `.specify/templates/phr-template.prompt.md` (or `templates/…`)
-     - Allocate an ID; compute the output path based on stage from step 2; write the file
-     - Fill placeholders and embed full PROMPT_TEXT and concise RESPONSE_TEXT
+#### 6.1 Personalize Button Visible
+- [ ] Login with user that has background (from Phase 5)
+- [ ] Navigate to any chapter
+- [ ] "Personalize" button visible at top of chapter
+- [ ] Button shows dropdown: Beginner / Intermediate / Advanced
 
-4) Validate + report
-   - No unresolved placeholders; path under `history/prompts/` and matches stage; stage/title/date coherent; print ID + path + stage + title.
-   - On failure: warn, don't block. Skip only for `/sp.phr`.
-"""
+#### 6.2 Personalization Works
+**Test Case 1: Beginner Level**
+- [ ] User background: Python (Beginner), ROS 2 (Beginner)
+- [ ] Navigate to "Module 1: ROS 2 Nodes"
+- [ ] Click "Personalize" → Select "Beginner"
+- [ ] Wait for API response (< 5 seconds)
+- [ ] Chapter content adapts:
+  - [ ] Python examples include basic syntax explanations
+  - [ ] ROS 2 concepts explained in detail
+  - [ ] Analogies used for complex topics
+- [ ] "Reset to Original" button appears
+
+**Test Case 2: Advanced Level**
+- [ ] User background: Python (Advanced), ROS 2 (Intermediate)
+- [ ] Navigate to same chapter
+- [ ] Click "Personalize" → Select "Advanced"
+- [ ] Chapter content adapts:
+  - [ ] Python examples assume proficiency (list comprehensions, decorators)
+  - [ ] ROS 2 concepts explained concisely
+  - [ ] Focus on advanced topics (QoS, lifecycle nodes)
+
+#### 6.3 Reset Functionality
+- [ ] After personalizing, click "Reset to Original"
+- [ ] Chapter content reverts to original
+- [ ] "Personalize" button appears again
+
+#### 6.4 Preference Persistence
+- [ ] Personalize a chapter (e.g., Module 1, Chapter 1)
+- [ ] Navigate to different chapter
+- [ ] Return to Module 1, Chapter 1
+- [ ] Check if preference persists:
+  - [ ] Should still be personalized (check user_preferences table)
+  - [ ] Or should revert to original (depends on design choice)
+
+#### 6.5 Unauthenticated User
+- [ ] Logout
+- [ ] Navigate to any chapter
+- [ ] "Personalize" button should NOT be visible (or greyed out)
+
+### Decision Point
+
+**All items ✅?**  
+→ **Proceed to Phase 7 (Translation)**
+
+**Any items ❌?**  
+→ **STOP. Fix personalization. Re-validate.**
+
+---
+
+## Checkpoint 7: Translation Functional
+
+**When**: After Phase 7 tasks (7.1-7.4)  
+**Time to validate**: 20 minutes  
+**Criteria for proceeding**: All ✅  
+
+### Validation Steps
+
+#### 7.1 Translate Button Visible
+- [ ] Navigate to any chapter
+- [ ] "Translate to Urdu" button visible at top
+
+#### 7.2 Translation Works
+**Test Translation:**
+- [ ] Click "Translate to Urdu" button
+- [ ] Wait for API response (< 5 seconds)
+- [ ] Chapter text translates to Urdu
+- [ ] RTL layout applied (text flows right-to-left)
+- [ ] Technical terms remain in English:
+  - [ ] "ROS 2 node" NOT "ROS 2 نوڈ"
+  - [ ] "publisher" NOT "پبلشر"
+- [ ] Code blocks unchanged (remain LTR, no translation)
+- [ ] Mermaid diagrams unchanged
+
+#### 7.3 Show Original Functionality
+- [ ] After translating, "Show Original" button appears
+- [ ] Click "Show Original"
+- [ ] English content restored
+- [ ] LTR layout restored
+
+#### 7.4 RTL Layout Check
+- [ ] Inspect page with DevTools
+- [ ] Check CSS: `direction: rtl` applied to content area
+- [ ] Check code blocks: `direction: ltr` maintained
+- [ ] Check navigation: Still functional (buttons clickable)
+
+#### 7.5 Translation Quality
+- [ ] Read translated chapter (if you know Urdu)
+- [ ] OR use Google Translate to back-translate
+- [ ] Verify:
+  - [ ] Technical accuracy maintained
+  - [ ] Grammar is correct (no machine-translation awkwardness)
+  - [ ] Formatting preserved (headings, lists, emphasis)
+
+### Decision Point
+
+**All items ✅?**  
+→ **Proceed to Phase 8 (Testing)**
+
+**Any items ❌?**  
+→ **STOP. Fix translation. Re-validate.**
+
+---
+
+## Checkpoint 8: Testing Complete
+
+**When**: After Phase 8 tasks (8.1-8.4)  
+**Time to validate**: 30 minutes  
+**Criteria for proceeding**: All ✅  
+
+### Validation Steps
+
+#### 8.1 Backend Tests Pass
+```bash
+cd backend
+pytest --cov=app --cov-report=html
+```
+- [ ] All tests pass (0 failures)
+- [ ] Coverage > 80% (check `htmlcov/index.html`)
+- [ ] Critical paths covered:
+  - [ ] RAG pipeline (embeddings, search, context, LLM)
+  - [ ] Auth (signup, login, token refresh)
+  - [ ] Personalization (if implemented)
+
+#### 8.2 Frontend Tests Pass
+```bash
+cd frontend
+npm test -- --coverage
+```
+- [ ] All tests pass
+- [ ] Coverage > 70%
+- [ ] Critical components covered:
+  - [ ] ChatWidget
+  - [ ] LoginModal
+  - [ ] PersonalizeButton (if implemented)
+
+#### 8.3 Integration Tests Pass
+- [ ] E2E test: User signup → Login → Ask question → Personalize
+- [ ] API error scenarios tested (500, 401, 422)
+- [ ] Mobile responsiveness tested (375px, 768px, 1024px)
+
+#### 8.4 Lighthouse Audit Pass
+```bash
+cd frontend
+npm run build
+# Serve production build
+npx serve build
+# Run Lighthouse (Chrome DevTools)
+```
+- [ ] Performance score > 85
+- [ ] Accessibility score = 100
+- [ ] Best Practices score > 95
+- [ ] SEO score > 90
+
+#### 8.5 Security Audit Pass
+```bash
+cd frontend
+npm audit
+# Fix all critical/high vulnerabilities
+
+cd backend
+pip install safety
+safety check
+# Fix all critical/high vulnerabilities
+```
+- [ ] Frontend: 0 critical/high vulnerabilities
+- [ ] Backend: 0 critical/high vulnerabilities
+- [ ] Manual review complete:
+  - [ ] No SQL injection vectors
+  - [ ] No XSS vectors
+  - [ ] CSRF protection enabled
+  - [ ] Secrets not exposed
+
+### Decision Point
+
+**All items ✅?**  
+→ **Proceed to Phase 9 (Deployment)**
+
+**Any items ❌?**  
+→ **STOP. Fix failing tests. Re-validate.**
+
+---
+
+## Checkpoint 9: Deployment Successful
+
+**When**: After Phase 9 tasks (9.1-9.4)  
+**Time to validate**: 30 minutes  
+**Criteria for proceeding**: All ✅  
+
+### Validation Steps
+
+#### 9.1 Frontend Deployed
+- [ ] GitHub Pages deployment successful
+- [ ] Site accessible at public URL (e.g., `https://username.github.io/physical-ai-book`)
+- [ ] OR Vercel deployment successful
+- [ ] All pages load correctly
+- [ ] Navigation works
+- [ ] Search functional
+
+#### 9.2 Backend Deployed
+- [ ] Railway (or alternative) deployment successful
+- [ ] Backend accessible at public URL (e.g., `https://physical-ai-api.railway.app`)
+- [ ] API docs accessible at `/docs`
+- [ ] Health check endpoint returns 200
+
+#### 9.3 Integration in Production
+**Test End-to-End in Production:**
+- [ ] Open deployed frontend
+- [ ] Ask chatbot question
+- [ ] Chatbot responds correctly (calls production backend)
+- [ ] No CORS errors in browser console
+- [ ] Response time acceptable (< 5 seconds)
+
+**Test Authentication (if implemented):**
+- [ ] Signup works in production
+- [ ] Login works in production
+- [ ] Token refresh works
+
+**Test Personalization (if implemented):**
+- [ ] Personalize button works
+- [ ] Content adapts correctly
+
+**Test Translation (if implemented):**
+- [ ] Translation works in production
+- [ ] RTL layout applied correctly
+
+#### 9.4 Environment Variables Secure
+- [ ] Check Railway environment variables:
+  - [ ] OpenAI API key set correctly
+  - [ ] Qdrant credentials set
+  - [ ] Neon database URL set
+  - [ ] JWT secret set (never hardcoded)
+- [ ] Check frontend environment:
+  - [ ] API URL points to production backend
+  - [ ] No secrets exposed (inspect build artifacts)
+
+#### 9.5 Monitoring Configured
+- [ ] Sentry errors logged (trigger test error)
+- [ ] Basic uptime monitoring enabled (optional)
+
+### Decision Point
+
+**All items ✅?**  
+→ **Proceed to Phase 10 (Reusable Intelligence) OR Prepare Submission**
+
+**Any items ❌?**  
+→ **STOP. Fix deployment issues. Re-validate.**
+
+---
+
+## Checkpoint 10: Reusable Intelligence Created
+
+**When**: After Phase 10 tasks (10.1-10.3)  
+**Time to validate**: 15 minutes  
+**Criteria for proceeding**: All ✅  
+
+### Validation Steps
+
+#### 10.1 Skills Created
+- [ ] Check `history/prompts/` directory
+- [ ] At least 2 PHR files exist:
+  - [ ] `001-rag-implementation-skill.md`
+  - [ ] `002-auth-integration-skill.md`
+- [ ] Each PHR documents:
+  - [ ] Skill name and purpose
+  - [ ] Persona definition
+  - [ ] Key questions the skill answers
+  - [ ] Principles the skill follows
+  - [ ] Example prompts that worked
+  - [ ] Example prompts that failed
+
+#### 10.2 Subagent Created
+- [ ] At least 1 subagent documented
+- [ ] PHR file exists: `003-content-writer-subagent.md`
+- [ ] Subagent documents:
+  - [ ] Specialization area
+  - [ ] Decision-making capabilities
+  - [ ] Example usage
+
+#### 10.3 Skills Tested
+- [ ] Skills tested with Gemini CLI
+- [ ] Evidence of usage (screenshots or logs)
+- [ ] PHRs updated with results
+
+### Decision Point
+
+**All items ✅?**  
+→ **ALL PHASES COMPLETE! Proceed to submission.**
+
+**Any items ❌?**  
+→ **STOP. Complete intelligence documentation.**
+
+---
+
+## Final Submission Checklist
+
+**Before submitting project:**
+
+### Code Quality
+- [ ] All code committed to git
+- [ ] No console.log() or debug statements in production
+- [ ] No commented-out code blocks
+- [ ] README.md complete and accurate
+
+### Documentation
+- [ ] README explains project clearly
+- [ ] Setup instructions tested by fresh user
+- [ ] ADRs written for key architectural decisions
+- [ ] PHRs document AI collaboration patterns
+
+### Functionality
+- [ ] All base features working (100 points)
+- [ ] Bonus features working (if implemented)
+- [ ] No critical bugs
+- [ ] Error messages user-friendly
+
+### Deployment
+- [ ] Frontend deployed and accessible
+- [ ] Backend deployed and accessible
+- [ ] Production environment tested end-to-end
+- [ ] Monitoring configured
+
+### Demo Video
+- [ ] Video recorded (< 90 seconds)
+- [ ] Shows key features:
+  - [ ] Book navigation
+  - [ ] Chatbot interaction
+  - [ ] Authentication (if implemented)
+  - [ ] Personalization (if implemented)
+  - [ ] Translation (if implemented)
+- [ ] Uploaded to YouTube or similar
+
+### Form Submission
+- [ ] GitHub repo link (public)
+- [ ] Deployed book URL
+- [ ] Demo video URL
+- [ ] WhatsApp number provided
+
+---
+
+## Emergency Troubleshooting
+
+### Issue: Chatbot Not Responding
+**Check:**
+1. Backend server running?
+2. CORS configured correctly?
+3. OpenAI API key valid?
+4. Qdrant connection working?
+
+**Fix:**
+- Check browser console for errors
+- Check backend logs for exceptions
+- Test API endpoint directly with curl
+
+### Issue: Authentication Not Working
+**Check:**
+1. Database connection working?
+2. JWT secret configured?
+3. Tokens stored correctly?
+
+**Fix:**
+- Check backend logs
+- Verify database schema
+- Test endpoints with Postman
+
+### Issue: Deployment Failed
+**Check:**
+1. Build succeeds locally?
+2. Environment variables set?
+3. Dependencies installed?
+
+**Fix:**
+- Check deployment logs
+- Verify package.json/requirements.txt
+- Test production build locally
+
+---
+
+## Success Criteria Summary
+
+**Base Deliverable (100 points)**:
+- ✅ Book deployed and accessible
+- ✅ Chatbot functional
+- ✅ Vector database populated
+- ✅ Backend API working
+- ✅ Frontend-backend integration complete
+
+**Bonus Features** (up to 150 extra points):
+- ✅ Authentication working (+50)
+- ✅ Personalization working (+50)
+- ✅ Translation working (+50)
+- ✅ Reusable intelligence created (+50)
+
+**Quality Standards**:
+- ✅ Test coverage > 70%
+- ✅ Lighthouse scores meet targets
+- ✅ Zero critical security vulnerabilities
+- ✅ Documentation complete
+
+---
+
+**Total Possible Score**: 250 points (100 base + 150 bonus)
+
+**Minimum for Submission**: 100 points (base deliverable complete)

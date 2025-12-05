@@ -1,111 +1,634 @@
-description = "Execute the implementation planning workflow using the plan template to generate design artifacts."
+# Implementation Plan: Physical AI Book with RAG Chatbot
 
-prompt = """
+**Version**: 1.0.0  
+**Status**: Active  
+**Created**: 2024-12-06  
+**Dependencies**: specification.md (SPEC-001)  
+
 ---
-description: Execute the implementation planning workflow using the plan template to generate design artifacts.
----
 
-## User Input
+## Architecture Overview
 
-```text
-$ARGUMENTS
+### System Components
+
+```
+Frontend (Docusaurus)
+├── Static Content (MDX chapters)
+├── React Components (Chatbot, Auth, Personalization, Translation)
+└── API Client (Axios with interceptors)
+        │
+        ├─→ FastAPI Backend
+        │   ├── API Layer (Routes, validation)
+        │   ├── Service Layer (Business logic)
+        │   ├── Repository Layer (Data access)
+        │   └── External Services (OpenAI, Qdrant)
+        │
+        ├─→ Neon Postgres (User data, preferences, chat history)
+        ├─→ Qdrant Vector DB (Chapter embeddings)
+        └─→ OpenAI API (Embeddings, chat completions)
 ```
 
-You **MUST** consider the user input before proceeding (if not empty).
+### Technology Stack Decisions
 
-## Outline
+**Decision 1: Monorepo vs Separate Repos**
+- **Choice**: Monorepo with `/frontend` and `/backend` directories
+- **Rationale**: Simplifies development, easier to maintain related code, single deployment pipeline
+- **Tradeoff**: Slightly larger repo size, but manageable with .gitignore
 
-1. **Setup**: Run `.specify/scripts/powershell/setup-plan.ps1 -Json` from repo root and parse JSON for FEATURE_SPEC, IMPL_PLAN, SPECS_DIR, BRANCH. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\\''m Groot' (or double-quote if possible: "I'm Groot").
+**Decision 2: FastAPI vs Django**
+- **Choice**: FastAPI
+- **Rationale**: Async support (critical for OpenAI API calls), auto-generated OpenAPI docs, better type hints
+- **Tradeoff**: Less built-in auth (mitigated by Better-auth), but more flexible
 
-2. **Load context**: Read FEATURE_SPEC and `.specify/memory/constitution.md`. Load IMPL_PLAN template (already copied).
+**Decision 3: Qdrant vs Pinecone vs Weaviate**
+- **Choice**: Qdrant Cloud Free Tier
+- **Rationale**: 1GB free storage, excellent Python SDK, open-source (can self-host if needed)
+- **Tradeoff**: Smaller free tier than Pinecone (1GB vs 1M vectors), but sufficient for book content
 
-3. **Execute plan workflow**: Follow the structure in IMPL_PLAN template to:
-   - Fill Technical Context (mark unknowns as "NEEDS CLARIFICATION")
-   - Fill Constitution Check section from constitution
-   - Evaluate gates (ERROR if violations unjustified)
-   - Phase 0: Generate research.md (resolve all NEEDS CLARIFICATION)
-   - Phase 1: Generate data-model.md, contracts/, quickstart.md
-   - Phase 1: Update agent context by running the agent script
-   - Re-evaluate Constitution Check post-design
-
-4. **Stop and report**: Command ends after Phase 2 planning. Report branch, IMPL_PLAN path, and generated artifacts.
-
-## Phases
-
-### Phase 0: Outline & Research
-
-1. **Extract unknowns from Technical Context** above:
-   - For each NEEDS CLARIFICATION → research task
-   - For each dependency → best practices task
-   - For each integration → patterns task
-
-2. **Generate and dispatch research agents**:
-
-   ```text
-   For each unknown in Technical Context:
-     Task: "Research {unknown} for {feature context}"
-   For each technology choice:
-     Task: "Find best practices for {tech} in {domain}"
-   ```
-
-3. **Consolidate findings** in `research.md` using format:
-   - Decision: [what was chosen]
-   - Rationale: [why chosen]
-   - Alternatives considered: [what else evaluated]
-
-**Output**: research.md with all NEEDS CLARIFICATION resolved
-
-### Phase 1: Design & Contracts
-
-**Prerequisites:** `research.md` complete
-
-1. **Extract entities from feature spec** → `data-model.md`:
-   - Entity name, fields, relationships
-   - Validation rules from requirements
-   - State transitions if applicable
-
-2. **Generate API contracts** from functional requirements:
-   - For each user action → endpoint
-   - Use standard REST/GraphQL patterns
-   - Output OpenAPI/GraphQL schema to `/contracts/`
-
-3. **Agent context update**:
-   - Run `.specify/scripts/powershell/update-agent-context.ps1 -AgentType gemini`
-   - These scripts detect which AI agent is in use
-   - Update the appropriate agent-specific context file
-   - Add only new technology from current plan
-   - Preserve manual additions between markers
-
-**Output**: data-model.md, /contracts/*, quickstart.md, agent-specific file
-
-## Key rules
-
-- Use absolute paths
-- ERROR on gate failures or unresolved clarifications
+**Decision 4: Better-auth vs NextAuth**
+- **Choice**: Better-auth
+- **Rationale**: Framework-agnostic, TypeScript-first, modern JWT approach
+- **Tradeoff**: Newer library (less mature), but active development and good docs
 
 ---
 
-As the main request completes, you MUST create and complete a PHR (Prompt History Record) using agent‑native tools when possible.
+## Implementation Phases
 
-1) Determine Stage
-   - Stage: constitution | spec | plan | tasks | red | green | refactor | explainer | misc | general
+### Phase 1: Foundation Setup (Priority: P0)
 
-2) Generate Title and Determine Routing:
-   - Generate Title: 3–7 words (slug for filename)
-   - Route is automatically determined by stage:
-     - `constitution` → `history/prompts/constitution/`
-     - Feature stages → `history/prompts/<feature-name>/` (spec, plan, tasks, red, green, refactor, explainer, misc)
-     - `general` → `history/prompts/general/`
+**Goal**: Establish project structure, configure tools, validate tech stack integration.
 
-3) Create and Fill PHR (Shell first; fallback agent‑native)
-   - Run: `.specify/scripts/bash/create-phr.sh --title "<title>" --stage <stage> [--feature <name>] --json`
-   - Open the file and fill remaining placeholders (YAML + body), embedding full PROMPT_TEXT (verbatim) and concise RESPONSE_TEXT.
-   - If the script fails:
-     - Read `.specify/templates/phr-template.prompt.md` (or `templates/…`)
-     - Allocate an ID; compute the output path based on stage from step 2; write the file
-     - Fill placeholders and embed full PROMPT_TEXT and concise RESPONSE_TEXT
+**Deliverables**:
+- Monorepo directory structure created
+- Docusaurus initialized with sample chapter
+- FastAPI backend with /health endpoint
+- Neon Postgres connected (test query)
+- Qdrant Cloud account created (test collection)
+- OpenAI API key tested (embedding + chat)
+- Development environment documented (README)
 
-4) Validate + report
-   - No unresolved placeholders; path under `history/prompts/` and matches stage; stage/title/date coherent; print ID + path + stage + title.
-   - On failure: warn, don't block. Skip only for `/sp.phr`.
-"""
+**Key Activities**:
+1. Run `specifyplus init physical-ai-book` (if using Spec-Kit Plus CLI)
+2. Create frontend/ with `npx create-docusaurus@latest`
+3. Create backend/ with FastAPI boilerplate
+4. Configure environment variables (.env.example)
+5. Test all external API connections
+6. Write setup documentation
+
+**Success Criteria**:
+- `npm start` runs Docusaurus locally
+- `uvicorn app.main:app --reload` runs FastAPI locally
+- All external services reachable (Neon, Qdrant, OpenAI)
+- Documentation allows new developer to set up in < 30 minutes
+
+**Estimated Time**: 4-6 hours
+
+---
+
+### Phase 2: Book Content Creation (Priority: P0)
+
+**Goal**: Write educational chapters for 4 modules (ROS 2, Gazebo, Isaac, VLA).
+
+**Deliverables**:
+- Module 1 (ROS 2): 4 chapters with code examples
+- Module 2 (Gazebo): 3 chapters with simulation tutorials
+- Module 3 (NVIDIA Isaac): 3 chapters with perception examples
+- Module 4 (VLA): 2 chapters with voice-to-action scenarios
+- All chapters in MDX format (Docusaurus)
+- Navigation configured (sidebars.ts)
+
+**Key Activities**:
+1. Research content using Context7 MCP (query official ROS 2, Gazebo, Isaac docs)
+2. Write chapters following template:
+   - Introduction (problem statement)
+   - Concepts (theory with diagrams)
+   - Code Examples (complete, runnable)
+   - Exercises (practice problems)
+3. Create Mermaid diagrams for architecture
+4. Add screenshots/videos where helpful
+5. Configure Docusaurus navigation
+
+**Content Outline**:
+
+**Module 1: ROS 2 Fundamentals (4 chapters)**
+1. Introduction to ROS 2 (middleware, nodes, topics)
+2. Building Your First Node (Python + rclpy)
+3. Topics and Publishers/Subscribers (message passing)
+4. Services and Actions (request/reply, long-running tasks)
+
+**Module 2: Gazebo Simulation (3 chapters)**
+1. Setting Up Gazebo Environment
+2. URDF and Robot Modeling
+3. Physics Simulation and Sensor Integration
+
+**Module 3: NVIDIA Isaac (3 chapters)**
+1. Isaac Sim Introduction (Omniverse, USD format)
+2. Isaac ROS Perception Pipeline (VSLAM, object detection)
+3. Sim-to-Real Transfer Techniques
+
+**Module 4: Vision-Language-Action (2 chapters)**
+1. Voice Commands with Whisper + LLMs
+2. Cognitive Planning (Natural language → ROS 2 actions)
+
+**Success Criteria**:
+- 12 chapters minimum (target: 15-18)
+- Each chapter 1000-3000 words
+- All code examples tested and runnable
+- Docusaurus navigation functional
+- Mobile responsive
+
+**Estimated Time**: 20-30 hours (can parallelize with AI assistance)
+
+---
+
+### Phase 3: RAG Chatbot Backend (Priority: P0)
+
+**Goal**: Build RAG pipeline (embeddings → vector search → LLM response).
+
+**Deliverables**:
+- Embeddings script (reads MDX → generates vectors → uploads to Qdrant)
+- Vector search service (queries Qdrant)
+- Context builder (assembles LLM prompt)
+- RAG engine (orchestrates full pipeline)
+- API endpoint POST /api/v1/chat
+
+**Key Activities**:
+1. Write script `scripts/seed_vector_db.py`:
+   - Parse MDX files (extract text, ignore frontmatter)
+   - Chunk text (500-1000 tokens per chunk)
+   - Generate embeddings (OpenAI text-embedding-3-small)
+   - Upload to Qdrant collection `book_chapters_en`
+2. Implement vector search service:
+   - Query Qdrant by embedding vector
+   - Filter by relevance score > 0.6
+   - Return top 5 results
+3. Implement context builder:
+   - Format search results for LLM
+   - Add conversation history (last 3 messages)
+   - Add selected text context (if provided)
+   - Truncate to 6000 tokens max
+4. Implement RAG engine:
+   - Orchestrate: embed query → search → build context → call OpenAI
+   - Handle errors (API limits, no results found)
+5. Create API endpoint:
+   - Validate request (Pydantic schema)
+   - Call RAG engine
+   - Return response with sources
+
+**Directory Structure**:
+```
+backend/app/
+├── services/chatbot/
+│   ├── embedder.py
+│   ├── vector_search.py
+│   ├── context_builder.py
+│   └── rag_engine.py
+├── api/v1/endpoints/
+│   └── chatbot.py
+└── schemas/
+    └── chatbot.py
+```
+
+**Success Criteria**:
+- Qdrant collection populated (verify vector count)
+- POST /chat returns valid response
+- Response time P95 < 3 seconds
+- Answers cite source chapters
+- Off-topic queries handled gracefully
+
+**Estimated Time**: 8-12 hours
+
+---
+
+### Phase 4: Chatbot Frontend (Priority: P0)
+
+**Goal**: Build React chatbot widget that calls backend API.
+
+**Deliverables**:
+- Floating chat widget (accessible on all pages)
+- Chat interface (messages, input, send button)
+- API integration (calls POST /chat)
+- Error handling (loading states, error messages)
+- Source display (clickable chapter links)
+
+**Key Activities**:
+1. Create ChatWidget component:
+   - Floating button (bottom-right corner)
+   - Expandable chat panel
+   - Message list (user + assistant messages)
+   - Input field + send button
+2. Implement useChatbot hook:
+   - API client (Axios with auth interceptors)
+   - State management (messages, loading, error)
+   - Error handling (retry logic, user-friendly messages)
+3. Implement selected-text feature:
+   - Detect text selection (window.getSelection())
+   - Keyboard shortcut (Ctrl+Q or Cmd+Q)
+   - Pass selected text as context to API
+4. Style chat widget:
+   - Mobile responsive (collapsible on small screens)
+   - Accessibility (keyboard navigation, ARIA labels)
+   - Match Docusaurus theme
+
+**Directory Structure**:
+```
+frontend/src/
+├── components/Chatbot/
+│   ├── ChatWidget.tsx
+│   ├── ChatMessage.tsx
+│   ├── ChatInput.tsx
+│   ├── SourceDisplay.tsx
+│   └── ChatWidget.css
+├── hooks/
+│   └── useChatbot.ts
+└── api/
+    └── chatbot.ts
+```
+
+**Success Criteria**:
+- Widget visible on all pages
+- Messages display correctly
+- API calls succeed (200 response)
+- Loading indicator shows during processing
+- Sources clickable (navigate to chapter)
+- Works on mobile (375px width)
+
+**Estimated Time**: 6-10 hours
+
+---
+
+### Phase 5: Authentication System (Priority: P1 - Bonus)
+
+**Goal**: Implement signup/login with Better-auth, collect user background.
+
+**Deliverables**:
+- Better-auth configured (backend + frontend)
+- Signup endpoint with background collection
+- Login endpoint with JWT tokens
+- Frontend auth UI (LoginModal, ProfileButton)
+- Session management (token refresh)
+
+**Key Activities**:
+1. Install Better-auth:
+   - Backend: `pip install better-auth-python` (or equivalent)
+   - Frontend: `npm install better-auth`
+2. Configure Better-auth backend:
+   - Database schema (users table)
+   - JWT settings (15-min access, 7-day refresh)
+   - Password hashing (bcrypt)
+3. Implement signup endpoint:
+   - Validate email, password strength
+   - Collect software_background, hardware_background (JSONB)
+   - Return JWT tokens
+4. Implement login endpoint:
+   - Verify credentials
+   - Return JWT tokens
+   - Update last_login timestamp
+5. Build frontend auth UI:
+   - LoginModal (signup/login forms)
+   - ProfileButton (user menu in navbar)
+   - ProtectedRoute wrapper (for personalization features)
+6. Implement token refresh:
+   - Axios interceptor catches 401
+   - Attempts token refresh
+   - Retries original request
+
+**Success Criteria**:
+- User can signup with valid email + password
+- Background fields collected (Python: Beginner/Intermediate/Advanced, etc.)
+- User can login and receive JWT tokens
+- Tokens stored securely (HttpOnly cookies or localStorage with CSRF protection)
+- Auto-refresh on token expiry
+- Logout clears tokens
+
+**Estimated Time**: 8-12 hours
+
+---
+
+### Phase 6: Personalization Engine (Priority: P1 - Bonus)
+
+**Goal**: Adapt chapter content based on user's background level.
+
+**Deliverables**:
+- Personalization API endpoint
+- PersonalizeButton component (chapter-level)
+- Content adaptation logic (calls OpenAI)
+- Preference storage (user_preferences table)
+
+**Key Activities**:
+1. Design personalization prompt:
+   - Input: Original chapter markdown, user background (JSON)
+   - Output: Adapted markdown
+   - Rules: Keep core facts, adjust examples/explanations
+2. Implement personalization service:
+   - Query user_preferences table
+   - Call OpenAI GPT-4 with personalization prompt
+   - Cache personalized content (avoid re-processing)
+3. Create API endpoint POST /api/v1/personalize:
+   - Requires authentication
+   - Input: chapter_id, personalization_level
+   - Output: Personalized markdown
+4. Build PersonalizeButton component:
+   - Visible only when authenticated
+   - Dropdown: Beginner / Intermediate / Advanced
+   - Calls API, replaces chapter content
+   - "Reset to Original" button
+
+**Personalization Prompt Example**:
+```
+Given this chapter content and user background, adapt the content:
+
+User Background:
+- Python: Advanced
+- ROS 2: Beginner
+- Linux: Intermediate
+
+Chapter: "ROS 2 Nodes Introduction"
+
+Rules:
+1. Assume user knows Python well (skip basic syntax)
+2. Explain ROS 2 concepts in detail (they're learning)
+3. Use advanced Python examples (list comprehensions, decorators)
+4. Keep technical accuracy (don't oversimplify)
+
+Output: Adapted markdown
+```
+
+**Success Criteria**:
+- "Personalize" button appears for logged-in users
+- Clicking button adapts content
+- Adapted content matches user's background level
+- Original content restorable
+- Preferences saved to database
+
+**Estimated Time**: 6-10 hours
+
+---
+
+### Phase 7: Translation System (Priority: P1 - Bonus)
+
+**Goal**: Translate chapters to Urdu on-demand.
+
+**Deliverables**:
+- Translation API endpoint
+- TranslateButton component
+- Urdu translation logic (OpenAI GPT-4)
+- RTL layout support (CSS)
+
+**Key Activities**:
+1. Design translation prompt:
+   - Input: English chapter markdown
+   - Output: Urdu markdown
+   - Rules: Keep technical terms in English, maintain formatting
+2. Implement translation service:
+   - Call OpenAI GPT-4 with translation prompt
+   - Cache translations (avoid re-translating)
+3. Create API endpoint POST /api/v1/translate:
+   - Input: chapter_id, target_language ("ur")
+   - Output: Translated markdown
+4. Build TranslateButton component:
+   - Toggle between English/Urdu
+   - Apply RTL layout (CSS direction: rtl)
+   - Code blocks remain LTR
+
+**Translation Prompt Example**:
+```
+Translate this technical chapter to Urdu:
+
+Chapter: "ROS 2 Nodes Introduction"
+
+Rules:
+1. Keep technical terms in English: "ROS 2 node", "publisher", "subscriber"
+2. Translate explanations and descriptions
+3. Maintain markdown formatting (headings, lists, code blocks)
+4. Keep code blocks unchanged
+5. Use professional, educational tone
+
+Output: Urdu markdown
+```
+
+**Success Criteria**:
+- "Translate to Urdu" button visible
+- Clicking button translates chapter
+- RTL layout applied correctly
+- Technical terms remain in English
+- Code blocks unchanged
+- "Show Original" button restores English
+
+**Estimated Time**: 6-8 hours
+
+---
+
+### Phase 8: Testing & Quality Assurance (Priority: P0)
+
+**Goal**: Validate all features work, meet acceptance criteria.
+
+**Deliverables**:
+- Backend test suite (pytest)
+- Frontend test suite (Jest + React Testing Library)
+- Integration tests (E2E with Playwright)
+- Performance tests (Lighthouse)
+- Security audit
+
+**Key Activities**:
+1. Write backend unit tests:
+   - RAG pipeline components
+   - Auth service (signup, login, token refresh)
+   - Personalization service
+2. Write frontend component tests:
+   - ChatWidget interactions
+   - Auth forms validation
+   - Personalization button behavior
+3. Write integration tests:
+   - User journey: Signup → Ask question → Personalize → Translate
+   - API error scenarios
+4. Run Lighthouse audit:
+   - Performance > 85
+   - Accessibility 100
+   - Best Practices > 95
+5. Security audit:
+   - `npm audit` (fix critical/high vulnerabilities)
+   - `safety check` (Python dependencies)
+   - Manual review (SQL injection, XSS, CSRF)
+
+**Success Criteria**:
+- Test coverage > 70%
+- All acceptance tests pass
+- Lighthouse scores meet targets
+- Zero critical security vulnerabilities
+- Manual testing confirms all features work
+
+**Estimated Time**: 8-12 hours
+
+---
+
+### Phase 9: Deployment (Priority: P0)
+
+**Goal**: Deploy frontend and backend to production.
+
+**Deliverables**:
+- Frontend deployed to GitHub Pages or Vercel
+- Backend deployed to Railway or similar
+- Environment variables configured
+- Monitoring enabled (Sentry)
+- Documentation updated (deployment guide)
+
+**Key Activities**:
+1. Configure GitHub Actions (or Vercel):
+   - Build Docusaurus
+   - Deploy to GitHub Pages
+2. Deploy backend to Railway:
+   - Connect GitHub repo
+   - Configure environment variables
+   - Set up auto-deploy on push to main
+3. Configure CORS:
+   - Allow frontend domain only
+4. Set up monitoring:
+   - Sentry for error tracking (frontend + backend)
+   - Basic uptime monitoring
+5. Test production deployment:
+   - Verify all endpoints accessible
+   - Test chatbot end-to-end
+   - Check auth flow works
+
+**Success Criteria**:
+- Book accessible at public URL
+- Chatbot functional in production
+- No CORS errors
+- Environment variables secure (not exposed)
+- Monitoring configured
+
+**Estimated Time**: 4-6 hours
+
+---
+
+### Phase 10: Reusable Intelligence (Priority: P1 - Bonus)
+
+**Goal**: Create custom Agent Skills and Subagents for Gemini CLI.
+
+**Deliverables**:
+- 2+ custom skills (e.g., RAG implementation, Auth integration)
+- 1+ subagent (e.g., Content writer, API tester)
+- Documented in history/prompts/ as PHRs
+
+**Key Activities**:
+1. Identify recurring patterns during development:
+   - Example: "Write RAG pipeline code following specific architecture"
+   - Example: "Implement API endpoint with validation, error handling, tests"
+2. Design custom skills:
+   - Define persona, questions, principles
+   - Test with Gemini CLI
+3. Design subagent:
+   - Example: "Content Writer" subagent for book chapters
+   - Specialization: Technical writing, code examples, pedagogical structure
+4. Document in PHRs:
+   - What prompts worked well
+   - What prompts failed
+   - How to invoke skills/subagents
+
+**Success Criteria**:
+- At least 2 skills created and tested
+- At least 1 subagent created and tested
+- PHRs document what worked vs failed
+- Skills actively used during final implementation phase
+
+**Estimated Time**: 4-6 hours
+
+---
+
+## Dependency Graph
+
+```
+Phase 1 (Foundation)
+    ├──→ Phase 2 (Book Content) ──→ Phase 3 (RAG Backend)
+    │                                       ↓
+    └──→ Phase 4 (Chatbot Frontend) ←──────┘
+                ↓
+    Phase 5 (Authentication)
+                ↓
+    ├──→ Phase 6 (Personalization)
+    └──→ Phase 7 (Translation)
+                ↓
+    Phase 8 (Testing)
+                ↓
+    Phase 9 (Deployment)
+    
+    Phase 10 (Reusable Intelligence) → Parallel to all phases
+```
+
+**Critical Path**: Phase 1 → 2 → 3 → 4 → 8 → 9 (Base deliverable)
+
+**Parallel Work**: Phases 6, 7, 10 can overlap with earlier phases.
+
+---
+
+## Resource Requirements
+
+### Development Environment
+- **Hardware**: Laptop with 16GB+ RAM (for running Docusaurus + FastAPI locally)
+- **Software**: 
+  - Node.js 18+
+  - Python 3.12+
+  - Git
+  - Code editor (VS Code recommended)
+  - Gemini CLI configured with MCP servers (Context7, GitHub)
+
+### External Accounts Needed
+- OpenAI API key (pay-as-you-go, ~$20-50 budget)
+- Qdrant Cloud account (free tier)
+- Neon Serverless Postgres (free tier)
+- GitHub account (for deployment + version control)
+- Vercel or Railway account (for backend hosting)
+
+### Time Estimate
+- **Base deliverable (100 points)**: 60-80 hours
+- **All bonus features (250 points)**: 90-120 hours
+- **Includes**: Learning, debugging, documentation, testing
+
+---
+
+## Risk Mitigation
+
+### Risk 1: OpenAI API Rate Limits
+- **Mitigation**: Upgrade to Tier 1 ($5 minimum), implement exponential backoff, cache embeddings
+
+### Risk 2: Qdrant Storage Exceeds 1GB
+- **Mitigation**: Chunk chapters to 500 tokens (smaller chunks), monitor usage, compress if needed
+
+### Risk 3: Authentication Integration Complexity
+- **Mitigation**: Use Context7 MCP to query Better-auth docs, allocate extra time (8-12h instead of 6h)
+
+### Risk 4: Translation Quality Issues
+- **Mitigation**: Iterate on translation prompt, test with sample chapters, have native speaker review
+
+### Risk 5: Deadline Pressure
+- **Mitigation**: Focus on base deliverable first (100 points), add bonus features incrementally
+
+---
+
+## Success Metrics
+
+**Phase Completion**:
+- Phase 1-4, 8-9: Must complete (base deliverable)
+- Phase 5-7, 10: Optional (bonus points)
+
+**Quality Gates**:
+- All acceptance tests pass
+- Lighthouse performance > 85
+- Test coverage > 70%
+- Zero critical security vulnerabilities
+
+**Submission Checklist**:
+- [ ] Book deployed and accessible
+- [ ] Demo video recorded (< 90 seconds)
+- [ ] GitHub repo public
+- [ ] README complete
+- [ ] Form submitted
+
+---
+
+## Revision History
+
+| Version | Date       | Changes                          | Author |
+|---------|------------|----------------------------------|--------|
+| 1.0.0   | 2024-12-06 | Initial implementation plan      | AI     |

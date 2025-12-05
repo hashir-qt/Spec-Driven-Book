@@ -1,0 +1,21 @@
+{
+    "mcpServers": {
+    "context7": {
+      "httpUrl": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "ctx7sk-465b4ec2-e915-4cb8-a496-9ad0e1f70c94",
+        "Accept": "application/json, text/event-stream"
+      }
+    },
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "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yes"
+      }
+    }
+  }
+}
