@@ -1,17 +1,0 @@
-GEMINI API KEY CONFIGURATION:  STARTER CODE IN AGENT-SDK 
- 
-import os import asyncio import nest_asyncio from agents import Agent, Runner, AsyncOpenAI, OpenAIChatCompletionsModel from agents.run import RunConfig 
- nest_asyncio.apply() 
-from dotenv import load_dotenv 
- load_dotenv()  # Make sure to load environment variables 
- api_key = os.getenv("GEMINI_API_KEY") 
- 
-external_client:AsyncOpenAI = AsyncOpenAI(     api_key=api_key,     base_url="https://generativelanguage.googleapis.com/v1beta/openai/", )  model = OpenAIChatCompletionsModel(     model="gemini-2.5-flash",     openai_client=external_client 
-)  config = RunConfig(     model=model,     model_provider=external_client,     tracing_disabled=True 
-)  async def main(): 
-    agent:Agent = Agent(         name="HaikuAssistant",         instructions="You only respond in haikus.",         model=model 
-    )      result:Runner = await Runner.run(agent, "Tell me about recursion in programming.", run_config=config) 
-     print(result.final_output)  
-# Run the main function if __name__ == "__main__":     asyncio.run(main()) 
-      
- 
