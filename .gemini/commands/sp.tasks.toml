@@ -945,3 +945,796 @@ curl -X POST http://localhost:8000/api/v1/chat \
 **Checkpoint 5** (After Phase 9):
 - Validate: Production deployment successful
 - Decision: Create demo video, submit project
+
+
+
+# Implementation Tasks: Physical AI Book with Multi-Agent RAG Chatbot
+
+**Version**: 2.1.0  
+**Status**: Active  
+**Created**: 2024-12-06  
+**Updated**: 2024-12-06 (OpenAI Agents SDK with Gemini API Client)  
+**Dependencies**: plan.md (v2.0)
+
+---
+
+## IMPORTANT: OpenAI Agents SDK with Gemini API
+
+**Architecture Pattern**: We use OpenAI Agents SDK with Gemini as the LLM backend by configuring a custom AsyncOpenAI client with Gemini's base_url and API key. This allows us to leverage the Agents SDK's framework while using Gemini Flash 2.5 for cost-effectiveness.
+
+```python
+# Pattern from Gemini OpenAI Compatibility docs
+from openai import AsyncOpenAI
+from agents import Agent, set_default_openai_client
+
+# Configure Gemini as OpenAI-compatible client
+gemini_client = AsyncOpenAI(
+    api_key=os.getenv("GEMINI_API_KEY"),
+    base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+)
+
+# Set globally for all agents
+set_default_openai_client(gemini_client, use_for_tracing=False)
+
+# Now create agents that use Gemini under the hood
+agent = Agent(
+    name="Concept Explainer",
+    model="gemini-2.5-flash",  # Gemini model
+    instructions="You are a patient educator..."
+)
+```
+
+---
+
+## Task Breakdown Structure
+
+### Phase 1: Foundation Setup ✅ COMPLETED
+
+[Previous tasks 1.1-1.4 remain unchanged]
+
+---
+
+### Phase 2: Book Content Creation ✅ COMPLETED
+
+[Previous tasks 2.1-2.7 remain unchanged]
+
+---
+
+### Phase 3: RAG Backend ✅ COMPLETED
+
+[Previous tasks 3.1-3.5 completed and now being enhanced]
+
+---
+
+### Phase 3.5: Multi-Agent System Implementation (CURRENT PHASE)
+
+#### Task 3.5.1: Setup OpenAI Agents SDK with Gemini Client
+**Duration**: 45 minutes  
+**Dependencies**: Task 3.5 (RAG Backend Complete)  
+**Type**: Setup  
+**Priority**: P0
+
+**What to do**:
+1. Install OpenAI Agents SDK:
+   ```bash
+   pip install agents openai
+   ```
+
+2. Create `backend/app/config/` directory
+
+3. Create `backend/app/config/settings.py`:
+   ```python
+   from pydantic_settings import BaseSettings
+   from functools import lru_cache
+   
+   class Settings(BaseSettings):
+       # API Keys
+       GEMINI_API_KEY: str  # Primary LLM for agents
+       QDRANT_URL: str
+       QDRANT_API_KEY: str
+       NEON_DATABASE_URL: str
+       
+       # Gemini OpenAI-compatible endpoint
+       GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
+       GEMINI_MODEL: str = "gemini-2.5-flash"
+       
+       # JWT Settings
+       JWT_SECRET_KEY: str
+       JWT_ALGORITHM: str = "HS256"
+       ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+       REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+       
+       # RAG Settings
+       QDRANT_COLLECTION_NAME: str = "book_chapters_en"
+       QDRANT_VECTOR_SIZE: int = 3072  # gemini-embedding-001
+       RAG_TOP_K: int = 5
+       RAG_SCORE_THRESHOLD: float = 0.6
+       RAG_MAX_CONTEXT_TOKENS: int = 6000
+       
+       # Agent Settings
+       AGENT_TEMPERATURE: float = 0.3
+       AGENT_MAX_TOKENS: int = 800
+       
+       # CORS Settings
+       CORS_ORIGINS: list = ["http://localhost:3000"]
+       
+       class Config:
+           env_file = ".env"
+           case_sensitive = True
+   
+   @lru_cache()
+   def get_settings():
+       return Settings()
+   ```
+
+4. Create `backend/app/config/agents_config.py` with 3 agent definitions (detailed below)
+
+5. Create `backend/app/config/llm_client.py`:
+   ```python
+   from openai import AsyncOpenAI
+   from agents import set_default_openai_client
+   from .settings import get_settings
+   
+   def setup_gemini_client():
+       """Configure OpenAI Agents SDK to use Gemini as backend LLM."""
+       settings = get_settings()
+       
+       # Create Gemini-backed AsyncOpenAI client
+       gemini_client = AsyncOpenAI(
+           api_key=settings.GEMINI_API_KEY,
+           base_url=settings.GEMINI_BASE_URL
+       )
+       
+       # Set as default client for all agents
+       # use_for_tracing=False to avoid OpenAI tracing errors
+       set_default_openai_client(gemini_client, use_for_tracing=False)
+       
+       return gemini_client
+   ```
+
+**Acceptance Criteria**:
+- OpenAI Agents SDK installed
+- `config/settings.py` loads environment variables
+- `config/llm_client.py` configures Gemini as OpenAI-compatible client
+- `config/agents_config.py` has 3 agent definitions
+- No import errors
+- Test: Can create Agent instance using Gemini model
+
+**Validation**:
+```bash
+# Test Gemini client setup
+python -c "
+from app.config.llm_client import setup_gemini_client
+from agents import Agent
+
+setup_gemini_client()
+agent = Agent(name='Test', model='gemini-2.5-flash', instructions='Test agent')
+print('✓ Gemini client configured successfully')
+"
+```
+
+**Gemini CLI Prompt**:
+```
+I need to configure OpenAI Agents SDK to use Gemini API as the LLM backend.
+
+Create these files in backend/app/config/:
+
+1. settings.py:
+   - Use Pydantic BaseSettings
+   - GEMINI_API_KEY (primary LLM)
+   - GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+   - GEMINI_MODEL = "gemini-2.5-flash"
+   - QDRANT settings
+   - NEON_DATABASE_URL
+   - JWT settings
+   - RAG settings (top_k=5, threshold=0.6)
+
+2. llm_client.py:
+   - Import AsyncOpenAI, set_default_openai_client, settings
+   - Function: setup_gemini_client()
+   - Create AsyncOpenAI with gemini_api_key and base_url
+   - Call set_default_openai_client(client, use_for_tracing=False)
+   - Return client
+
+3. agents_config.py:
+   - Define 3 agents (concept_explainer, code_helper, troubleshoot)
+   - Each has: name, description, system_prompt, task_keywords, rag_filter_keywords
+   - Detailed system prompts for each persona
+   - Routing config with default_agent and min_confidence
+
+Follow Gemini OpenAI compatibility docs pattern.
+Use type hints throughout.
+```
+
+---
+
+#### Task 3.5.2: Implement Agent Orchestrator
+**Duration**: 60 minutes  
+**Dependencies**: Task 3.5.1  
+**Type**: Feature Implementation  
+**Priority**: P0
+
+**What to do**:
+1. Create `backend/app/agents/` directory
+2. Create `backend/app/agents/orchestrator.py`
+3. Implement `AgentOrchestrator` class:
+   - `classify_query(query: str) -> tuple[str, float]`
+   - Keyword-based classification using agents_config
+   - Calculate confidence score
+   - Return (agent_name, confidence)
+   - Default to "concept_explainer" if confidence < 0.6
+4. Add structured logging for routing decisions
+5. Write unit tests
+
+**Implementation Pattern**:
+```python
+from app.config.agents_config import AGENTS_CONFIG, ROUTING_CONFIG
+import logging
+
+logger = logging.getLogger(__name__)
+
+class AgentOrchestrator:
+    def __init__(self):
+        self.agents_config = AGENTS_CONFIG
+        self.routing_config = ROUTING_CONFIG
+    
+    def classify_query(self, query: str) -> tuple[str, float]:
+        """
+        Classify query to determine appropriate agent.
+        
+        Returns:
+            (agent_name, confidence_score)
+        """
+        query_lower = query.lower()
+        query_words = set(query_lower.split())
+        
+        scores = {}
+        for agent_name, config in self.agents_config.items():
+            keywords = config["task_keywords"]
+            matches = sum(1 for kw in keywords if kw in query_lower)
+            confidence = matches / len(keywords) if keywords else 0
+            scores[agent_name] = confidence
+        
+        # Get agent with highest score
+        best_agent = max(scores, key=scores.get)
+        best_score = scores[best_agent]
+        
+        # Use default if confidence too low
+        min_confidence = self.routing_config["min_confidence"]
+        if best_score < min_confidence:
+            logger.info(f"Low confidence ({best_score:.2f}), using default agent")
+            return self.routing_config["default_agent"], best_score
+        
+        logger.info(f"Routed to {best_agent} with confidence {best_score:.2f}")
+        return best_agent, best_score
+    
+    def route_query(self, query: str) -> str:
+        """Simple wrapper that returns agent name only."""
+        agent_name, _ = self.classify_query(query)
+        return agent_name
+```
+
+**Acceptance Criteria**:
+- Orchestrator classifies queries correctly (test with 10+ examples)
+- Handles edge cases (empty query, ambiguous query)
+- Confidence scoring works
+- Logging shows routing decisions
+- Test coverage > 80%
+
+**Test Cases**:
+```python
+# In tests/unit/test_orchestrator.py
+def test_concept_query():
+    orchestrator = AgentOrchestrator()
+    agent, confidence = orchestrator.classify_query("What is ROS 2?")
+    assert agent == "concept_explainer"
+    assert confidence > 0.7
+
+def test_code_query():
+    orchestrator = AgentOrchestrator()
+    agent, confidence = orchestrator.classify_query("Show me code for a publisher")
+    assert agent == "code_helper"
+    assert confidence > 0.75
+
+def test_troubleshoot_query():
+    orchestrator = AgentOrchestrator()
+    agent, confidence = orchestrator.classify_query("Error: node not found")
+    assert agent == "troubleshoot"
+    assert confidence > 0.8
+```
+
+---
+
+#### Task 3.5.3: Implement Concept Explainer Agent
+**Duration**: 45 minutes  
+**Dependencies**: Task 3.5.2  
+**Type**: Agent Implementation  
+**Priority**: P0
+
+**What to do**:
+1. Create `backend/app/agents/concept_agent.py`
+2. Implement `ConceptExplainerAgent` class
+3. Uses OpenAI Agents SDK with Gemini backend (already configured)
+4. Method: `process_query(query, rag_context, sources) -> dict`
+
+**Implementation Pattern**:
+```python
+from agents import Agent
+from app.config.agents_config import AGENTS_CONFIG
+from app.config.settings import get_settings
+import logging
+
+logger = logging.getLogger(__name__)
+
+class ConceptExplainerAgent:
+    def __init__(self):
+        self.config = AGENTS_CONFIG["concept_explainer"]
+        self.settings = get_settings()
+        
+        # Create agent using OpenAI Agents SDK (with Gemini backend)
+        self.agent = Agent(
+            name=self.config["name"],
+            model=self.settings.GEMINI_MODEL,  # "gemini-2.5-flash"
+            instructions=self.config["system_prompt"]
+        )
+    
+    async def process_query(
+        self,
+        query: str,
+        rag_context: str,
+        sources: list[dict]
+    ) -> dict:
+        """
+        Process query using Concept Explainer persona.
+        
+        Args:
+            query: User's question
+            rag_context: Retrieved chapter excerpts from RAG
+            sources: List of source metadata
+        
+        Returns:
+            dict with answer, sources, agent info
+        """
+        try:
+            # Build user message with RAG context
+            user_message = f"""Context from book chapters:
+
+{rag_context}
+
+---
+
+Question: {query}
+
+Please explain this concept clearly using analogies and the provided context. Always cite the source chapters."""
+
+            # Run agent (uses Gemini via configured client)
+            from agents import Runner
+            result = await Runner.run_async(
+                self.agent,
+                user_message
+            )
+            
+            answer = result.final_output
+            
+            logger.info(f"Concept Agent generated response: {len(answer)} chars")
+            
+            return {
+                "answer": answer,
+                "sources": sources,
+                "agent": self.config["name"],
+                "agent_type": "concept_explainer"
+            }
+            
+        except Exception as e:
+            logger.error(f"Concept Agent error: {e}")
+            raise
+```
+
+**Acceptance Criteria**:
+- Agent generates educational explanations
+- Uses RAG context in responses
+- Includes source citations
+- Tone matches "patient educator" persona
+- Handles Gemini API errors gracefully
+
+---
+
+#### Task 3.5.4: Implement Code Helper Agent
+**Duration**: 45 minutes  
+**Dependencies**: Task 3.5.3  
+**Type**: Agent Implementation  
+**Priority**: P0
+
+**What to do**:
+- Create `backend/app/agents/code_agent.py`
+- Similar structure to Concept Agent
+- Use "code_helper" config
+- Focus on code examples and best practices
+
+**Key Difference**:
+- System prompt emphasizes providing working code
+- Post-process to ensure code blocks formatted correctly
+
+**Gemini CLI Prompt**:
+```
+Implement CodeHelperAgent in app/agents/code_agent.py
+
+Pattern: Same as ConceptExplainerAgent but:
+1. Load "code_helper" config from agents_config
+2. Create Agent with gemini-2.5-flash model
+3. System prompt focuses on code examples
+4. process_query method same structure
+5. Ensure response includes ```python code blocks
+
+Use OpenAI Agents SDK with Gemini backend (already configured in llm_client.py).
+Include error handling and logging.
+```
+
+---
+
+#### Task 3.5.5: Implement Troubleshooting Agent
+**Duration**: 45 minutes  
+**Dependencies**: Task 3.5.4  
+**Type**: Agent Implementation  
+**Priority**: P0
+
+**What to do**:
+- Create `backend/app/agents/troubleshoot_agent.py`
+- Use "troubleshoot" config
+- Format responses as step-by-step solutions
+
+**Gemini CLI Prompt**:
+```
+Implement TroubleshootingAgent in app/agents/troubleshoot_agent.py
+
+Pattern: Same as ConceptExplainerAgent but:
+1. Load "troubleshoot" config
+2. Create Agent with diagnostic persona
+3. Format responses as numbered steps
+4. Include clarifying questions if needed
+
+Follow same async pattern with OpenAI Agents SDK + Gemini.
+```
+
+
+---
+
+#### Task 3.5.6: Refactor RAG Service for Agent Integration
+**Duration**: 60 minutes  
+**Dependencies**: Task 3.5.5, Task 3.5 (Phase 3 complete)  
+**Type**: Refactoring  
+**Priority**: P0
+
+**What to do**:
+1. Reorganize Phase 3 code into `backend/app/chatbot/` directory:
+   - Move `embedder.py` → `app/chatbot/embedder.py`
+   - Move `vector_search.py` → `app/chatbot/vector_search.py`
+   - Move `context_builder.py` → `app/chatbot/context_builder.py`
+2. Create `app/chatbot/rag_service.py`:
+   - Main entry point for RAG operations
+   - Method: `retrieve_context(query: str, agent_type: str) -> dict`
+     - Generate query embedding (Gemini)
+     - Apply agent-specific filters (based on agent's rag_filter_keywords)
+     - Search Qdrant with filters
+     - Build context using context_builder
+     - Return: {context: str, sources: List[dict], relevance: float}
+3. Add agent-specific filtering logic:
+   - If agent_type == "code_helper": prioritize code examples
+   - If agent_type == "troubleshoot": prioritize troubleshooting sections
+4. Test RAG service independently
+
+**Acceptance Criteria**:
+- RAG service callable by agents: `rag_service.retrieve_context(query, agent_type)`
+- Returns context string + source metadata + average relevance score
+- Agent-specific filtering works (code agent gets more code examples)
+- No breaking changes to existing Phase 3 functionality
+- All imports updated correctly
+
+**Directory Structure After Refactoring**:
+```
+app/chatbot/
+├── __init__.py
+├── rag_service.py          # Main RAG orchestration
+├── embedder.py             # Gemini embeddings
+├── vector_search.py        # Qdrant queries
+└── context_builder.py      # Context assembly
+```
+
+**Gemini CLI Prompt**:
+```
+Refactor Phase 3 RAG code into app/chatbot/ module with agent integration:
+
+1. Move existing code:
+   - embedder.py, vector_search.py, context_builder.py → app/chatbot/
+
+2. Create app/chatbot/rag_service.py:
+   - Class: RAGService
+   - Method: retrieve_context(query: str, agent_type: str) -> dict
+   - Steps:
+     a. Generate embedding (use embedder)
+     b. Apply agent-specific Qdrant filters (metadata filtering)
+     c. Search vector DB (use vector_search)
+     d. Build context (use context_builder)
+     e. Return dict with context, sources, relevance
+
+3. Add agent-specific filtering:
+   - code_helper: filter payload.content contains "```" or "code"
+   - troubleshoot: filter payload.section_title contains "troubleshoot" or "error"
+
+Use async/await throughout.
+Include comprehensive error handling.
+```
+
+---
+
+#### Task 3.5.7: Update Chat API Endpoint for Agent Orchestration
+**Duration**: 45 minutes  
+**Dependencies**: Task 3.5.6  
+**Type**: API Update  
+**Priority**: P0
+
+**What to do**:
+1. Create/update `backend/app/routes/` directory
+2. Create `backend/app/routes/chat.py`
+3. Implement POST /api/v1/chat endpoint:
+   - Parse request (ChatRequest schema)
+   - Call orchestrator to route query
+   - Call RAG service to get context
+   - Call appropriate agent with query + context
+   - Format response (ChatResponse schema)
+   - Log performance metrics
+   - Save to chat_history table (if user authenticated)
+4. Update response schema to include agent metadata
+5. Add error handling for each step
+6. Test endpoint end-to-end
+
+**Request/Response Flow**:
+```
+Request: POST /api/v1/chat
+{
+  "message": "What is ROS 2?",
+  "context": null,  # Optional selected text
+  "conversation_history": []  # Optional
+}
+
+Flow:
+1. Orchestrator.route_query("What is ROS 2?") → "concept_explainer"
+2. RAGService.retrieve_context("What is ROS 2?", "concept_explainer") → {context, sources}
+3. ConceptExplainerAgent.process_query("What is ROS 2?", context, sources) → {answer, sources, agent}
+4. Return response
+
+Response: 200 OK
+{
+  "answer": "ROS 2 (Robot Operating System 2) is...",
+  "sources": [
+    {
+      "chapter_id": "module-1-ros2/01-introduction",
+      "chapter_title": "Introduction to ROS 2",
+      "url": "/docs/module-1-ros2/01-introduction",
+      "relevance_score": 0.87
+    }
+  ],
+  "agent_used": "concept_explainer",
+  "agent_name": "Concept Explainer Agent",
+  "agent_confidence": 0.85,
+  "context_relevance": 0.87,
+  "metadata": {
+    "response_time_ms": 2341,
+    "rag_time_ms": 456,
+    "agent_time_ms": 1785
+  }
+}
+```
+
+**Acceptance Criteria**:
+- Endpoint accessible at POST /api/v1/chat
+- Request validation works (Pydantic)
+- Orchestrator routes query to appropriate agent
+- RAG retrieves context before agent processes
+- Response includes all required fields
+- Performance metrics logged
+- Response time P95 < 3 seconds
+- Error handling for orchestrator, RAG, and agent failures
+
+**Gemini CLI Prompt**:
+```
+Implement POST /api/v1/chat endpoint in app/routes/chat.py for agent-based chatbot:
+
+Flow:
+1. Validate request (ChatRequest schema)
+2. Route query using AgentOrchestrator
+3. Retrieve RAG context using RAGService
+4. Call appropriate agent (concept_explainer, code_helper, or troubleshoot)
+5. Format response (ChatResponse schema with agent metadata)
+6. Log performance metrics
+7. Return response
+
+Include:
+- Async/await throughout
+- Error handling for each step (orchestrator failure, RAG failure, agent failure)
+- Performance timing (track rag_time_ms, agent_time_ms)
+- Structured logging
+
+Response schema:
+- answer (str)
+- sources (list of dicts)
+- agent_used (str)
+- agent_name (str)
+- agent_confidence (float)
+- context_relevance (float)
+- metadata (dict with timing)
+```
+
+---
+
+#### Task 3.5.8: Update Chat History Model with Agent Metadata
+**Duration**: 20 minutes  
+**Dependencies**: Task 3.5.7  
+**Type**: Database Update  
+**Priority**: P1
+
+**What to do**:
+1. Update `app/db/models/chat_history.py`:
+   - Add columns: agent_used, agent_confidence, context_relevance
+   - Add columns: response_time_ms, rag_time_ms, agent_time_ms
+2. Create Alembic migration
+3. Run migration on local database
+4. Update chat_history saving logic in chat.py endpoint
+
+**Acceptance Criteria**:
+- chat_history table has new columns
+- Migration runs successfully
+- Chat endpoint saves agent metadata to database
+- Old chat history still accessible
+
+**Alembic Migration**:
+```bash
+alembic revision --autogenerate -m "Add agent metadata to chat_history"
+alembic upgrade head
+```
+
+---
+
+#### Task 3.5.9: Write Tests for Agent System
+**Duration**: 60 minutes  
+**Dependencies**: Task 3.5.8  
+**Type**: Testing  
+**Priority**: P1
+
+**What to do**:
+1. Create `tests/unit/test_orchestrator.py`:
+   - Test query classification with various inputs
+   - Test confidence scoring
+   - Test default agent fallback
+2. Create `tests/unit/test_agents.py`:
+   - Mock GEMINI API responses
+   - Test each agent's process_query method
+   - Verify persona differences in responses
+3. Create `tests/integration/test_chat_api.py`:
+   - Test end-to-end: request → orchestrator → RAG → agent → response
+   - Test error scenarios
+   - Test performance (response time < 3s)
+4. Run tests: `pytest tests/ --cov=app/agents --cov=app/chatbot`
+
+**Acceptance Criteria**:
+- All tests pass
+- Coverage > 75% for agents/ and chatbot/ modules
+- Integration test verifies full flow
+- Performance test confirms <3s response time
+
+---
+
+### Phase 3.5 Summary
+
+**Total Tasks**: 9  
+**Estimated Time**: 6-8 hours  
+**Priority**: P0 (Required for base deliverable)
+
+**Completion Checklist**:
+- [ ] Task 3.5.1: OpenAI SDK + config setup
+- [ ] Task 3.5.2: Orchestrator implemented
+- [ ] Task 3.5.3: Concept Agent implemented
+- [ ] Task 3.5.4: Code Agent implemented
+- [ ] Task 3.5.5: Troubleshoot Agent implemented
+- [ ] Task 3.5.6: RAG service refactored for agents
+- [ ] Task 3.5.7: Chat API updated with agent flow
+- [ ] Task 3.5.8: Database updated with agent metadata
+- [ ] Task 3.5.9: Tests written and passing
+
+---
+
+### Phase 4: Chatbot Frontend (Minor Updates)
+
+#### Task 4.1-4.4: Previous Tasks ✅ COMPLETED
+
+**Minor Update Required**: Task 4.5 (Add Agent Display)
+
+#### Task 4.5: Display Agent Information in Chat UI
+**Duration**: 30 minutes  
+**Dependencies**: Task 3.5.7, Task 4.1-4.4  
+**Type**: UI Enhancement  
+**Priority**: P1
+
+**What to do**:
+1. Update ChatMessage component to display agent name
+2. Add agent icon/avatar (optional):
+   - Concept: 🎓 or lightbulb icon
+   - Code: 💻 or code icon
+   - Troubleshoot: 🔧 or wrench icon
+3. Show agent transition messages:
+   - "Concept Explainer Agent is thinking..."
+   - "Connecting you to Code Helper Agent..."
+4. Style agent badge in response
+
+**Acceptance Criteria**:
+- Agent name visible in each response
+- Visual distinction between different agents (color/icon)
+- Loading state shows which agent is processing
+- Mobile responsive
+
+---
+
+### Phases 5-10: No Changes
+
+Phases 5 (Authentication), 6 (Personalization), 7 (Translation), 8 (Testing), 9 (Deployment), 10 (Reusable Intelligence) remain unchanged from original tasks.md.
+
+---
+
+## Updated Task Execution Order
+
+**Week 1** (30-40 hours):
+- Days 1-2: Phase 1 (Foundation) ✅
+- Days 3-5: Phase 2 (Content Creation) ✅
+- Days 6-7: Phase 3 (RAG Backend) ✅
+
+**Week 2** (30-40 hours):
+- Days 1-2: **Phase 3.5 (Multi-Agent System)** ← CURRENT
+- Days 3-4: Phase 4 (Chatbot Frontend + Agent Display)
+- Days 5-6: Phase 5 (Authentication)
+- Day 7: Phase 6 (Personalization)
+
+**Week 3** (20-30 hours):
+- Day 1: Phase 7 (Translation)
+- Day 2: Phase 8 (Testing)
+- Day 3: Phase 9 (Deployment)
+- Days 4-5: Phase 10 (Reusable Intelligence)
+- Days 6-7: Final testing, demo video, submission
+
+---
+
+## Checkpoint Strategy (Updated)
+
+**Checkpoint 1** (After Phase 1): ✅ PASSED
+- All external APIs connected
+
+**Checkpoint 2** (After Phase 2): ✅ PASSED
+- All chapters written and reviewed
+
+**Checkpoint 3** (After Phase 3): ✅ PASSED
+- Basic RAG pipeline functional
+
+**Checkpoint 3.5** (After Phase 3.5): ← NEXT CHECKPOINT
+- Validate:
+  - [ ] 3 agents implemented and tested
+  - [ ] Orchestrator routes queries correctly (>80% accuracy)
+  - [ ] Agents use RAG context before responding
+  - [ ] API response includes agent metadata
+  - [ ] Response time P95 < 3 seconds
+- Decision: Proceed to Phase 4 (Frontend Updates)
+
+**Checkpoint 4** (After Phase 4): 
+- Validate: Chatbot functional with agent display
+- Decision: Base deliverable complete, start bonuses or deploy
+
+**Checkpoint 5** (After Phase 9):
+- Validate: Production deployment successful
+- Decision: Create demo video, submit project
+
+---
+
+## Revision History
+
+| Version | Date       | Changes                                      | Author |
+|---------|------------|----------------------------------------------|--------|
+| 1.0.0   | 2024-12-06 | Initial tasks                                | AI     |
+| 2.0.0   | 2024-12-06 | Added Phase 3.5 multi-agent tasks            | AI     |

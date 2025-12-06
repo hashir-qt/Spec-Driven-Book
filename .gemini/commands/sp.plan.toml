@@ -632,3 +632,682 @@ Phase 1 (Foundation)
 | Version | Date       | Changes                          | Author |
 |---------|------------|----------------------------------|--------|
 | 1.0.0   | 2024-12-06 | Initial implementation plan      | AI     |
+
+
+# Implementation Plan: Physical AI Book with Multi-Agent RAG Chatbot
+
+**Version**: 2.0.0  
+**Status**: Active  
+**Created**: 2024-12-06  
+**Updated**: 2024-12-06 (OpenAI Agents SDK Architecture)  
+**Dependencies**: specification.md (SPEC-002)  
+
+---
+
+## Architecture Overview (Updated)
+
+### Multi-Agent System Components
+
+```
+Frontend (Docusaurus)
+├── Static Content (MDX chapters)
+├── React Components (Chatbot, Auth, Personalization, Translation)
+└── API Client (Axios with interceptors)
+        │
+        ├─→ FastAPI Backend
+        │   ├── Routes (API endpoints)
+        │   ├── Agents (OpenAI Agents SDK)
+        │   │   ├── Orchestrator (query routing)
+        │   │   ├── Concept Explainer Agent
+        │   │   ├── Code Helper Agent
+        │   │   └── Troubleshooting Agent
+        │   ├── Chatbot (RAG services)
+        │   │   ├── RAG Service (orchestration)
+        │   │   ├── Vector Search (Qdrant)
+        │   │   ├── Embedder (Gemini)
+        │   │   └── Context Builder
+        │   ├── Services (Auth, Personalization, Translation)
+        │   └── Config (Settings, Agent definitions)
+        │
+        ├─→ Neon Postgres (User data, preferences, chat history)
+        ├─→ Qdrant Vector DB (RAG Embeddings)
+        └─→ GEMINI API (Agents SDK for chat completions)
+```
+
+### Request Flow
+
+```
+1. User Query → Frontend ChatWidget
+                    ↓
+2. POST /api/v1/chat → FastAPI Router
+                    ↓
+3. Agent Orchestrator analyzes query intent
+   - Classifies: concept | code | troubleshoot | learning
+                    ↓
+4. Routes to appropriate agent
+   - Concept Explainer Agent
+   - Code Helper Agent
+   - Troubleshooting Agent
+                    ↓
+5. Agent calls RAG Service
+   - Generate query embedding (Gemini)
+   - Search Qdrant vector DB
+   - Retrieve top 5 relevant chapters
+                    ↓
+6. Context Builder assembles context
+   - Format chapter excerpts
+   - Add metadata (chapter IDs, titles)
+   - Truncate to token limit
+                    ↓
+7. Agent generates response (OpenAI Agents SDK)
+   - System prompt defines agent persona
+   - Context injected into prompt
+   - Generate educational response
+                    ↓
+8. Response returned to user
+   - Answer text
+   - Source citations
+   - Agent name
+   - Performance metrics
+```
+
+---
+
+## Updated Backend Directory Structure
+
+```
+backend/
+├── app/
+│   ├── main.py                         # FastAPI application entry
+│   │
+│   ├── config/                         # Configuration module
+│   │   ├── __init__.py
+│   │   ├── settings.py                 # Environment variables, API keys
+│   │   └── agents_config.py            # Agent definitions, prompts, routing rules
+│   │
+│   ├── routes/                         # API routes (previously api/v1/endpoints/)
+│   │   ├── __init__.py
+│   │   ├── chat.py                     # POST /chat (agent orchestration)
+│   │   ├── auth.py                     # POST /signup, /login, /refresh
+│   │   ├── personalization.py          # POST /personalize
+│   │   └── translation.py              # POST /translate
+│   │
+│   ├── schemas/                        # Pydantic models (API contracts)
+│   │   ├── __init__.py
+│   │   ├── chat.py                     # ChatRequest, ChatResponse, AgentTask
+│   │   ├── auth.py                     # UserCreate, UserResponse, TokenResponse
+│   │   ├── personalization.py          # PersonalizationRequest, PersonalizationResponse
+│   │   └── translation.py              # TranslationRequest, TranslationResponse
+│   │
+│   ├── agents/                         # OpenAI Agents SDK implementation
+│   │   ├── __init__.py
+│   │   ├── orchestrator.py             # Agent task routing logic
+│   │   ├── concept_agent.py            # Concept Explainer Agent
+│   │   ├── code_agent.py               # Code Helper Agent
+│   │   ├── troubleshoot_agent.py       # Troubleshooting Agent
+│   │   └── learning_agent.py           # Learning Path Agent (bonus)
+│   │
+│   ├── chatbot/                        # RAG services (previously services/chatbot/)
+│   │   ├── __init__.py
+│   │   ├── rag_service.py              # RAG orchestration (main entry point)
+│   │   ├── vector_search.py            # Qdrant vector similarity search
+│   │   ├── embedder.py                 # Gemini embedding generation
+│   │   └── context_builder.py          # Context assembly for agents
+│   │
+│   ├── services/                       # Business logic services
+│   │   ├── __init__.py
+│   │   ├── auth_service.py             # Authentication logic
+│   │   ├── personalization_service.py  # Content adaptation
+│   │   └── translation_service.py      # Urdu translation
+│   │
+│   ├── db/                             # Database layer
+│   │   ├── __init__.py
+│   │   ├── session.py                  # Database session management
+│   │   └── models/
+│   │       ├── __init__.py
+│   │       ├── user.py                 # User model
+│   │       ├── preference.py           # UserPreference model
+│   │       └── chat_history.py         # ChatHistory model (updated with agent metadata)
+│   │
+│   └── utils/                          # Utility functions
+│       ├── __init__.py
+│       ├── logging.py                  # Structured logging
+│       └── validators.py               # Custom Pydantic validators
+│
+├── scripts/                            # Setup and maintenance scripts
+│   ├── seed_vector_db.py               # Populate Qdrant with chapter embeddings
+│   ├── test_connections.py             # Test external API connections
+│   └── test_agents.py                  # Test agent routing and responses
+│
+├── tests/                              # Test suite
+│   ├── unit/
+│   │   ├── test_orchestrator.py        # Agent routing logic tests
+│   │   ├── test_agents.py              # Individual agent tests
+│   │   └── test_rag_service.py         # RAG pipeline tests
+│   ├── integration/
+│   │   ├── test_chat_api.py            # End-to-end chat tests
+│   │   └── test_agent_rag.py           # Agent + RAG integration tests
+│   └── conftest.py                     # Pytest fixtures
+│
+├── requirements/
+│   ├── base.txt                        # Core dependencies
+│   ├── dev.txt                         # Development tools
+│   └── prod.txt                        # Production dependencies
+│
+├── alembic/                            # Database migrations
+│   ├── versions/
+│   └── env.py
+│
+├── .env.example                        # Environment variable template
+├── pyproject.toml                      # Poetry configuration
+└── Dockerfile                          # Container for deployment
+```
+
+---
+
+## Key Architecture Decisions (ADRs)
+
+### ADR-001: OpenAI Agents SDK for Multi-Agent Architecture
+
+**Context**: Phase 3 complete. Need to implement chatbot with better specialization than single LLM.
+
+**Decision**: Use OpenAI Agents SDK to create specialized agents (Concept, Code, Troubleshoot) that handle different query types.
+
+**Alternatives Considered**:
+1. **Single GPT-4 model with prompt engineering**: 
+   - Pro: Simpler architecture
+   - Con: Less specialization, harder to maintain distinct personas
+   
+2. **LangChain agents**:
+   - Pro: More flexible, many tools
+   - Con: Heavier framework, more complexity
+   
+3. **OpenAI Agents SDK**:
+   - Pro: Native OpenAI integration, clean API, task specialization
+   - Con: Newer, less mature than LangChain
+
+**Rationale**: 
+- OpenAI Agents SDK provides clean task-based architecture
+- Each agent has distinct system prompt and task definition
+- Better separation of concerns (orchestrator routes, agents specialize)
+- Easier to extend (add new agents without changing core logic)
+
+**Consequences**:
+- **Positive**: Clear agent specialization, easier debugging, better UX (users see which agent helped them)
+- **Negative**: Additional routing layer (orchestrator), slightly more complex than single LLM
+- **Constraint**: Future agents must follow SDK patterns
+
+---
+
+### ADR-002: Backend Structure Reorganization
+
+**Context**: Original structure had `api/v1/endpoints/`, `services/chatbot/`. With multi-agent architecture, need clearer separation.
+
+**Decision**: Restructure backend as:
+- `routes/` (API endpoints)
+- `agents/` (OpenAI Agents SDK implementation)
+- `chatbot/` (RAG services)
+- `config/` (all configuration including agent definitions)
+
+**Rationale**:
+- `routes/` is more standard than `api/v1/endpoints/`
+- `agents/` clearly separates agent logic from RAG services
+- `chatbot/` focuses purely on RAG (embeddings, search, context)
+- `config/` centralizes all settings (environment, agent prompts)
+
+**Consequences**:
+- **Positive**: Clearer separation of concerns, easier to locate code
+- **Negative**: Requires refactoring if Phase 3 used old structure
+- **Constraint**: All new features follow this structure
+
+---
+
+## Implementation Phases (Updated)
+
+### Phase 1: Foundation Setup ✅ (Completed)
+
+Already completed. No changes needed.
+
+---
+
+### Phase 2: Book Content Creation ✅ (Completed)
+
+Already completed. No changes needed.
+
+---
+
+### Phase 3: RAG Backend ✅ (Completed - Now Enhanced)
+
+**Status**: Core RAG functionality complete. Now enhancing with agent architecture.
+
+**What was completed**:
+- Embeddings script (reads MDX → Qdrant)
+- Vector search service
+- Context builder
+- Basic RAG pipeline
+
+**What needs updating**:
+- Refactor into new `chatbot/` directory structure
+- Expose RAG as service for agents to call
+- Add agent-specific context filtering
+
+---
+
+### Phase 3.5: Multi-Agent System (NEW - Current Phase)
+
+**Goal**: Implement OpenAI Agents SDK with specialized agents and orchestrator.
+
+**Deliverables**:
+- Agent orchestrator (query classification and routing)
+- 3 specialized agents (Concept, Code, Troubleshoot)
+- Agent-RAG integration
+- Updated chat API endpoint
+
+**Key Activities**:
+
+#### Task 3.5.1: Setup OpenAI Agents SDK
+**Duration**: 30 minutes  
+**Type**: Setup
+
+**What to do**:
+- Install OpenAI Agents SDK: `pip install openai-agents-sdk`
+- Create `config/agents_config.py` with agent definitions
+- Define agent system prompts and task keywords
+- Test basic agent creation
+
+**Acceptance Criteria**:
+- OpenAI Agents SDK installed
+- `agents_config.py` has definitions for 3 agents
+- Can instantiate agent from config
+
+---
+
+#### Task 3.5.2: Implement Agent Orchestrator
+**Duration**: 60 minutes  
+**Type**: Feature Implementation
+
+**What to do**:
+- Create `agents/orchestrator.py`
+- Implement query classification logic:
+  - Extract keywords from user query
+  - Match against agent task keywords
+  - Return agent name + confidence score
+- Handle ambiguous queries (default to Concept Explainer)
+- Add logging for routing decisions
+
+**Acceptance Criteria**:
+- Orchestrator classifies queries correctly (>80% accuracy on test set)
+- Returns agent name and confidence score
+- Handles edge cases (empty query, ambiguous query)
+
+**Test Cases**:
+```python
+assert orchestrator.route("What is ROS 2?") == ("concept_explainer", 0.9)
+assert orchestrator.route("Show me code for publisher") == ("code_helper", 0.85)
+assert orchestrator.route("Error installing Gazebo") == ("troubleshoot", 0.88)
+```
+
+---
+
+#### Task 3.5.3: Implement Concept Explainer Agent
+**Duration**: 45 minutes  
+**Type**: Agent Implementation
+
+**What to do**:
+- Create `agents/concept_agent.py`
+- Load agent config from `agents_config.py`
+- Implement `process_query(query, rag_context)` method:
+  - Takes user query + RAG context
+  - Calls OpenAI Agents SDK with system prompt
+  - Returns educational explanation
+- Add source citation logic
+- Test with sample queries
+
+**Acceptance Criteria**:
+- Agent generates educational explanations
+- Uses RAG context in responses
+- Cites source chapters
+- Tone matches "patient educator" persona
+
+---
+
+#### Task 3.5.4: Implement Code Helper Agent
+**Duration**: 45 minutes  
+**Type**: Agent Implementation
+
+**What to do**:
+- Create `agents/code_agent.py`
+- Similar structure to Concept Agent
+- Focus on code examples and best practices
+- Validate code snippets (syntax check if possible)
+
+**Acceptance Criteria**:
+- Agent provides working code examples
+- Explains code line-by-line
+- Focuses on practical solutions
+- Tone matches "experienced developer" persona
+
+---
+
+#### Task 3.5.5: Implement Troubleshooting Agent
+**Duration**: 45 minutes  
+**Type**: Agent Implementation
+
+**What to do**:
+- Create `agents/troubleshoot_agent.py`
+- Implement diagnostic questioning approach
+- Format responses as step-by-step solutions
+- Link to troubleshooting sections from book
+
+**Acceptance Criteria**:
+- Agent asks diagnostic questions
+- Provides systematic debugging steps
+- Tone matches "senior engineer" persona
+- References troubleshooting documentation
+
+---
+
+#### Task 3.5.6: Integrate Agents with RAG
+**Duration**: 60 minutes  
+**Type**: Integration
+
+**What to do**:
+- Refactor `chatbot/rag_service.py` to expose clean API for agents
+- Add agent-specific RAG filters (e.g., Code Agent prioritizes code examples)
+- Update context builder to format for agent consumption
+- Test agent + RAG integration
+
+**Acceptance Criteria**:
+- Agents can call RAG service
+- RAG returns filtered context based on agent type
+- Context format optimized for agent prompts
+
+---
+
+#### Task 3.5.7: Update Chat API Endpoint
+**Duration**: 45 minutes  
+**Type**: API Update
+
+**What to do**:
+- Update `routes/chat.py` to use agent orchestrator
+- Flow: Request → Orchestrator → Agent → RAG → Response
+- Add agent metadata to response (agent_used, confidence)
+- Add performance metrics (rag_time_ms, agent_time_ms)
+- Update response schema
+
+**Acceptance Criteria**:
+- POST /chat uses orchestrator + agents
+- Response includes agent name and metadata
+- Performance metrics logged
+- Error handling for agent failures
+
+---
+
+### Phase 4: Chatbot Frontend ✅ (Completed - Minor Updates)
+
+**Status**: Core chatbot UI complete. Small updates needed.
+
+**Updates Required**:
+- Display agent name in chat response (e.g., "Code Helper Agent")
+- Show agent icon/avatar (optional visual enhancement)
+- Add agent switching indicator ("Connecting you to Troubleshooting Agent...")
+
+---
+
+### Phase 5-10: No Changes
+
+Phases 5 (Authentication), 6 (Personalization), 7 (Translation), 8 (Testing), 9 (Deployment), 10 (Reusable Intelligence) remain unchanged.
+
+---
+
+## Configuration File Structure
+
+### config/settings.py
+
+```python
+from pydantic_settings import BaseSettings
+from functools import lru_cache
+
+class Settings(BaseSettings):
+    # API Keys
+    GEMINI_API_KEY: str
+    GEMINI_BASE_URL: str
+    QDRANT_URL: str
+    QDRANT_API_KEY: str
+    NEON_DATABASE_URL: str
+    
+    # JWT Settings
+    JWT_SECRET_KEY: str
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    
+    # Qdrant Settings
+    QDRANT_COLLECTION_NAME: str = "book_chapters_en"
+    QDRANT_VECTOR_SIZE: int = 3072  # gemini-embedding-001
+    
+    # OpenAI Settings
+    OPENAI_CHAT_MODEL: str = "gpt-4-turbo"
+    OPENAI_MAX_TOKENS: int = 800
+    OPENAI_TEMPERATURE: float = 0.3
+    
+    # RAG Settings
+    RAG_TOP_K: int = 5
+    RAG_SCORE_THRESHOLD: float = 0.6
+    RAG_MAX_CONTEXT_TOKENS: int = 6000
+    
+    # CORS Settings
+    CORS_ORIGINS: list = ["http://localhost:3000"]
+    
+    class Config:
+        env_file = ".env"
+        case_sensitive = True
+
+@lru_cache()
+def get_settings():
+    return Settings()
+```
+
+### config/agents_config.py
+
+```python
+AGENTS_CONFIG = {
+    "concept_explainer": {
+        "name": "Concept Explainer Agent",
+        "description": "Explains theoretical concepts using analogies and clear language",
+        "system_prompt": """You are a patient educator specializing in Physical AI and Robotics.
+
+Your role:
+- Explain theoretical concepts clearly using analogies
+- Break down complex topics into digestible parts
+- Focus on "why" and "how things work"
+- Use the provided RAG context from book chapters
+
+Style:
+- Patient and encouraging
+- Use real-world analogies
+- Progressive complexity (simple → advanced)
+- Always cite source chapters
+
+Context format:
+You will receive relevant chapter excerpts in this format:
+[Chapter: module-1-ros2/01-introduction]
+{content}
+
+Always reference these sources in your explanation.""",
+        
+        "task_keywords": [
+            "explain", "what is", "how does", "why", "concept", 
+            "theory", "understand", "meaning", "definition"
+        ],
+        
+        "rag_filter_keywords": [
+            "theory", "concepts", "introduction", "overview", 
+            "fundamentals", "basics"
+        ],
+        
+        "confidence_threshold": 0.7
+    },
+    
+    "code_helper": {
+        "name": "Code Helper Agent",
+        "description": "Assists with coding questions, debugging, and best practices",
+        "system_prompt": """You are an experienced robotics developer specializing in ROS 2, Gazebo, and NVIDIA Isaac.
+
+Your role:
+- Help debug code issues
+- Explain code examples from the book
+- Suggest best practices
+- Provide working code snippets
+
+Style:
+- Direct and practical
+- Focus on working solutions
+- Explain "why" code works this way
+- Always cite source chapters with code examples
+
+Code formatting:
+- Use proper syntax highlighting
+- Include comments for clarity
+- Provide complete, runnable examples
+- Explain each significant line
+
+Context format:
+You will receive code examples and explanations from chapters.
+Reference these directly and build upon them.""",
+        
+        "task_keywords": [
+            "code", "debug", "error", "implement", "example", 
+            "syntax", "function", "class", "how to code", "programming"
+        ],
+        
+        "rag_filter_keywords": [
+            "code", "example", "implementation", "snippet", 
+            "function", "class", "method"
+        ],
+        
+        "confidence_threshold": 0.75
+    },
+    
+    "troubleshoot": {
+        "name": "Troubleshooting Agent",
+        "description": "Helps diagnose and resolve technical issues",
+        "system_prompt": """You are a senior robotics engineer specializing in debugging and system issues.
+
+Your role:
+- Help diagnose installation problems
+- Debug runtime errors
+- Resolve environment issues
+- Guide systematic troubleshooting
+
+Approach:
+1. Ask clarifying questions about the error
+2. Identify likely causes
+3. Provide step-by-step solutions
+4. Suggest preventive measures
+
+Style:
+- Systematic and methodical
+- Clear diagnostic questions
+- Step-by-step solutions
+- Reference troubleshooting sections from book
+
+Context format:
+You will receive troubleshooting guides and common issues from chapters.
+Use these as reference for your diagnostic approach.""",
+        
+        "task_keywords": [
+            "error", "problem", "doesn't work", "issue", "install", 
+            "fix", "broken", "crash", "fails", "troubleshoot"
+        ],
+        
+        "rag_filter_keywords": [
+            "troubleshooting", "common issues", "setup", "installation",
+            "error", "debugging", "problems"
+        ],
+        
+        "confidence_threshold": 0.8
+    }
+}
+
+# Routing configuration
+ROUTING_CONFIG = {
+    "default_agent": "concept_explainer",  # Fallback if no strong match
+    "min_confidence": 0.6,  # Minimum confidence to route to specific agent
+    "keyword_match_weight": 0.7,  # Weight for keyword matching
+    "context_weight": 0.3  # Weight for contextual analysis
+}
+```
+
+---
+
+## Updated Dependency Graph
+
+```
+Phase 1 (Foundation) ✅
+    ├──→ Phase 2 (Book Content) ✅
+    │                   ↓
+    └──→ Phase 3 (RAG Backend) ✅
+                   ↓
+         Phase 3.5 (Multi-Agent System) ← CURRENT
+                   ↓
+    ┌──────────────┴──────────────┐
+    ▼                             ▼
+Phase 4 (Chatbot Frontend)  Phase 5 (Authentication)
+    │                             │
+    └──────────────┬──────────────┘
+                   ↓
+         Phase 6 (Personalization)
+         Phase 7 (Translation)
+                   ↓
+         Phase 8 (Testing)
+                   ↓
+         Phase 9 (Deployment)
+
+Phase 10 (Reusable Intelligence) → Parallel to all phases
+```
+
+**Critical Path**: Phase 1 → 2 → 3 → 3.5 → 4 → 8 → 9 (Base deliverable)
+
+---
+
+## Estimated Time (Updated)
+
+**Phase 3.5 (Multi-Agent System)**: 6-8 hours
+- Task 3.5.1: Setup (30 min)
+- Task 3.5.2: Orchestrator (60 min)
+- Task 3.5.3: Concept Agent (45 min)
+- Task 3.5.4: Code Agent (45 min)
+- Task 3.5.5: Troubleshoot Agent (45 min)
+- Task 3.5.6: Agent-RAG Integration (60 min)
+- Task 3.5.7: API Update (45 min)
+- Testing & debugging: 90 min
+
+**Total Project (with multi-agent)**: 70-90 hours for base deliverable
+
+---
+
+## Success Metrics (Updated)
+
+**Phase 3.5 Completion Criteria**:
+- [ ] 3 specialized agents implemented
+- [ ] Orchestrator routes queries correctly (>80% accuracy)
+- [ ] Agents use RAG context before generating responses
+- [ ] API response includes agent metadata
+- [ ] Response time P95 < 3 seconds (including routing + RAG + generation)
+- [ ] Agent responses demonstrate distinct personas
+
+**Quality Gates**:
+- Agent routing accuracy: >80%
+- RAG context relevance: >0.6 average
+- Response time: <3s (P95)
+- Test coverage: >75% for agent logic
+
+---
+
+## Revision History
+
+| Version | Date       | Changes                                      | Author |
+|---------|------------|----------------------------------------------|--------|
+| 1.0.0   | 2024-12-06 | Initial implementation plan                  | AI     |
+| 2.0.0   | 2024-12-06 | Multi-agent architecture with OpenAI SDK     | AI     |

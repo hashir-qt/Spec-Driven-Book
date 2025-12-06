@@ -506,3 +506,511 @@ Build a **complete educational platform** consisting of:
 - [ ] Success criteria testable
 - [ ] Risks assessed
 - [ ] Ready for planning phase
+
+# Specification: Physical AI Book with Multi-Agent RAG Chatbot
+
+**Version**: 2.0.0  
+**Status**: Active  
+**Priority**: P0 (Required for submission)  
+**Created**: 2024-12-06  
+**Updated**: 2024-12-06 (OpenAI Agents SDK Integration)
+
+---
+
+## Intent
+
+Build a **complete educational platform** consisting of:
+
+1. **Static Documentation Site** (Docusaurus) containing Physical AI and Humanoid Robotics course content
+2. **Multi-Agent RAG Chatbot** using OpenAI Agents SDK where specialized agents handle different query types and communicate with RAG for context retrieval
+3. **Authentication System** (Better-auth) for user signup/signin with background collection
+4. **Personalization Engine** that adapts chapter content based on user background
+5. **Translation System** that converts chapters to Urdu on-demand
+
+**Target Audience**: Students learning Physical AI, Humanoid Robotics, ROS 2, NVIDIA Isaac, and Gazebo simulation.
+
+**Core Value Proposition**: Students can read chapters, ask questions to specialized AI agents that understand the book content via RAG, and get personalized explanations based on their experience level.
+
+---
+
+## Architecture Changes (v2.0)
+
+### Multi-Agent System with OpenAI Agents SDK
+
+**Agent-Based Architecture**:
+```
+User Query → FastAPI Router → Agent Orchestrator
+                                    ↓
+                         Agent Task Assignment
+                                    ↓
+                    ┌───────────────┼───────────────┐
+                    ▼               ▼               ▼
+            Concept Agent   Code Agent    Troubleshoot Agent
+                    │               │               │
+                    └───────────────┴───────────────┘
+                                    ↓
+                            RAG Service (Qdrant)
+                                    ↓
+                        Context Retrieved
+                                    ↓
+                    Agent Generates Response
+                                    ↓
+                        Response to User
+```
+
+**Specialized Agents**:
+
+1. **Concept Explainer Agent**
+   - Task: Explain theoretical concepts (ROS 2 architecture, Isaac Sim principles)
+   - RAG Query: Searches chapter sections on theory/concepts
+   - Persona: Patient educator, uses analogies
+
+2. **Code Helper Agent**
+   - Task: Answer coding questions, debug code, explain examples
+   - RAG Query: Searches code examples and implementation sections
+   - Persona: Experienced developer, focuses on best practices
+
+3. **Troubleshooting Agent**
+   - Task: Help debug errors, installation issues, environment problems
+   - RAG Query: Searches troubleshooting sections and common issues
+   - Persona: Senior engineer, systematic problem solver
+
+4. **Learning Path Agent**
+   - Task: Recommend next topics, assess understanding, suggest exercises
+   - RAG Query: Searches chapter prerequisites and learning objectives
+   - Persona: Curriculum designer, understanding-focused
+
+### Backend Structure (Updated)
+
+```
+backend/
+├── app/
+│   ├── main.py                    # FastAPI application
+│   ├── config/
+│   │   ├── settings.py            # All configurations (OpenAI, Qdrant, Neon, etc.)
+│   │   └── agents_config.py       # Agent definitions and prompts
+│   │
+│   ├── routes/                    # API routes (was api/v1/endpoints/)
+│   │   ├── chat.py                # POST /chat (agent orchestration)
+│   │   ├── auth.py                # Authentication endpoints
+│   │   ├── personalization.py     # Personalization endpoints
+│   │   └── translation.py         # Translation endpoints
+│   │
+│   ├── schemas/                   # Pydantic models
+│   │   ├── chat.py                # ChatRequest, ChatResponse, AgentTask
+│   │   ├── auth.py                # User, Token schemas
+│   │   ├── personalization.py     # Personalization schemas
+│   │   └── translation.py         # Translation schemas
+│   │
+│   ├── agents/                    # OpenAI Agents SDK implementation
+│   │   ├── orchestrator.py        # Agent task assignment logic
+│   │   ├── concept_agent.py       # Concept explanation agent
+│   │   ├── code_agent.py          # Code assistance agent
+│   │   ├── troubleshoot_agent.py  # Debugging agent
+│   │   └── learning_agent.py      # Learning path agent
+│   │
+│   ├── chatbot/                   # RAG and context services
+│   │   ├── rag_service.py         # RAG orchestration (embeddings + search)
+│   │   ├── vector_search.py       # Qdrant queries
+│   │   ├── embedder.py            # Gemini embeddings
+│   │   └── context_builder.py     # Context assembly for agents
+│   │
+│   ├── services/                  # Business logic
+│   │   ├── auth_service.py
+│   │   ├── personalization_service.py
+│   │   └── translation_service.py
+│   │
+│   ├── db/                        # Database layer
+│   │   ├── session.py
+│   │   └── models/
+│   │       ├── user.py
+│   │       ├── preference.py
+│   │       └── chat_history.py
+│   │
+│   └── utils/
+│       ├── logging.py
+│       └── validators.py
+```
+
+---
+
+## Success Criteria (Updated for Multi-Agent)
+
+### Base Deliverables (Required - 100 points)
+
+**SD-1: Book Content is Published**
+- Book deployed to GitHub Pages or Vercel
+- All 4 modules (ROS 2, Gazebo, Isaac, VLA) with complete chapters
+- Accessible at public URL
+- Navigation works (sidebar, search)
+- Mobile responsive
+
+**SD-2: Multi-Agent RAG Chatbot Functions**
+- Chatbot widget accessible on every page
+- Agent orchestrator routes queries to appropriate specialized agent
+- Agents use RAG (Qdrant) to retrieve relevant chapter context
+- User receives contextual answer within 3 seconds
+- Answers cite specific chapters as sources
+- Works without authentication (guest mode)
+- Handles selected-text queries (user highlights → asks question)
+
+**SD-3: Agents Operational**
+- At least 3 specialized agents implemented:
+  - Concept Explainer Agent
+  - Code Helper Agent
+  - Troubleshooting Agent
+- Each agent has distinct persona and task specialization
+- Agent responses demonstrate specialization (different tone/focus)
+
+**SD-4: RAG Integration with Agents**
+- All chapter content embedded and stored in Qdrant
+- Semantic search returns relevant results (relevance score > 0.6)
+- Embeddings use gemini-embedding-001
+- Agents receive context from RAG before generating responses
+
+**SD-5: Backend API Operational**
+- FastAPI backend deployed and accessible
+- POST /api/v1/chat endpoint responds correctly
+- Agent orchestrator determines which agent handles query
+- Error handling (no 500 errors on invalid input)
+- Response format includes: answer, sources, agent_used
+
+**SD-6: Integration Complete**
+- Frontend calls backend API successfully
+- CORS configured correctly
+- Error messages displayed to user
+- Loading states shown during API calls
+- Agent name displayed in response (e.g., "Code Helper Agent")
+
+### Bonus Features (Extra Points)
+
+**Bonus 1: Authentication (50 points)**
+- Users can signup with email/password
+- Signup form collects: software background, hardware background
+- Users can login and maintain session
+- JWT tokens used for auth
+- Password hashing (bcrypt)
+- Logout functionality
+
+**Bonus 2: Personalization (50 points)**
+- Each chapter has "Personalize" button
+- Clicking button adapts content to user's background level
+- Personalized content shows adjusted examples/explanations
+- Original content restorable
+- Works only for authenticated users
+
+**Bonus 3: Translation (50 points)**
+- Each chapter has "Translate to Urdu" button
+- Clicking button translates entire chapter
+- Translation maintains formatting (headings, lists, code blocks)
+- Technical terms kept in English
+- RTL layout applied correctly
+
+**Bonus 4: Reusable Intelligence (50 points)**
+- Created at least 2 custom Agent Skills for Gemini CLI
+- Created at least 1 Subagent for specialized task
+- Documented in history/prompts/ as PHRs
+- Skills actively used during development
+
+**Bonus 5: Advanced Agent Features (50 points)**
+- Learning Path Agent implemented (4th specialized agent)
+- Agent handoff mechanism (agent can delegate to another agent)
+- Agent conversation memory (agents remember context within session)
+- Agent performance metrics (track which agent handles queries best)
+
+---
+
+## Technical Constraints (Updated)
+
+**TC-1: Technology Stack (Fixed)**
+- Frontend: Docusaurus 3.x + React 18 + TypeScript
+- Backend: FastAPI (Python 3.12+)
+- Database: Neon Serverless Postgres
+- Vector DB: Qdrant Cloud Free Tier (1GB limit for RAG)
+- Auth: Better-auth library
+- AI Framework: **OpenAI Agents SDK** + Gemini API (gemini-embedding-001 for embeddings)
+- Chat Model: OpenAI GPT-4 Turbo (via Agents SDK)
+
+**TC-2: Agent Architecture Requirements**
+- Minimum 3 specialized agents (Concept, Code, Troubleshoot)
+- Each agent must have:
+  - Distinct persona and system prompt
+  - Task specialization logic
+  - RAG context integration
+  - Error handling
+- Agent orchestrator must:
+  - Classify user queries
+  - Route to appropriate agent
+  - Handle agent failures gracefully
+  - Support agent handoffs (optional)
+
+**TC-3: RAG Integration Requirements**
+- Agents MUST use RAG context before generating responses
+- No agent generates answers without retrieving relevant chapter content
+- Context must include: chapter excerpts, metadata (chapter ID, title), relevance scores
+- Agents must cite sources in responses
+
+**TC-4: Performance Requirements**
+- Chatbot response: P95 < 3 seconds (including agent routing + RAG + generation)
+- Agent orchestrator decision: < 200ms
+- RAG context retrieval: < 500ms
+- Page load: Lighthouse performance score > 85
+
+---
+
+## Data Requirements (Updated)
+
+### Agent Configuration Schema
+
+```python
+# config/agents_config.py
+
+AGENTS_CONFIG = {
+    "concept_explainer": {
+        "name": "Concept Explainer Agent",
+        "system_prompt": """You are a patient educator specializing in Physical AI and Robotics concepts.
+        
+Your role:
+- Explain theoretical concepts clearly using analogies
+- Break down complex topics into digestible parts
+- Focus on "why" and "how things work"
+- Use the provided RAG context from book chapters
+
+Style:
+- Patient and encouraging
+- Use real-world analogies
+- Progressive complexity (simple → advanced)
+- Always cite source chapters""",
+        "task_keywords": ["explain", "what is", "how does", "why", "concept", "theory"],
+        "rag_filter": "theory|concepts|introduction|overview",
+    },
+    
+    "code_helper": {
+        "name": "Code Helper Agent",
+        "system_prompt": """You are an experienced robotics developer specializing in ROS 2, Gazebo, and NVIDIA Isaac.
+
+Your role:
+- Help debug code issues
+- Explain code examples from the book
+- Suggest best practices
+- Provide working code snippets
+
+Style:
+- Direct and practical
+- Focus on working solutions
+- Explain "why" code works this way
+- Always cite source chapters with code examples""",
+        "task_keywords": ["code", "debug", "error", "implement", "example", "syntax"],
+        "rag_filter": "code|example|implementation|snippet",
+    },
+    
+    "troubleshoot": {
+        "name": "Troubleshooting Agent",
+        "system_prompt": """You are a senior robotics engineer specializing in debugging and system issues.
+
+Your role:
+- Help diagnose installation problems
+- Debug runtime errors
+- Resolve environment issues
+- Guide systematic troubleshooting
+
+Style:
+- Systematic and methodical
+- Ask diagnostic questions
+- Provide step-by-step solutions
+- Reference troubleshooting sections from book""",
+        "task_keywords": ["error", "problem", "doesn't work", "issue", "install", "fix"],
+        "rag_filter": "troubleshooting|common issues|setup|installation",
+    }
+}
+```
+
+### Chat History Schema (Updated)
+
+```sql
+CREATE TABLE chat_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    
+    message TEXT NOT NULL,
+    response TEXT NOT NULL,
+    
+    -- Agent metadata
+    agent_used VARCHAR(50),  -- 'concept_explainer', 'code_helper', etc.
+    agent_confidence FLOAT,  -- How confident was routing decision
+    
+    -- RAG metadata
+    sources JSONB,  -- Source chapters used
+    context_relevance FLOAT,  -- Average relevance score of context
+    
+    -- Performance metrics
+    response_time_ms INT,
+    rag_time_ms INT,
+    agent_time_ms INT,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_chat_history_user ON chat_history(user_id);
+CREATE INDEX idx_chat_history_agent ON chat_history(agent_used);
+CREATE INDEX idx_chat_history_created ON chat_history(created_at DESC);
+```
+
+---
+
+## User Scenarios (Updated for Agents)
+
+### Scenario 1: Concept Question (Concept Explainer Agent)
+
+**Given**: User asks "What are ROS 2 nodes and how do they communicate?"  
+**When**: Query sent to chatbot  
+**Then**:
+1. Agent orchestrator classifies query as "concept explanation"
+2. Routes to Concept Explainer Agent
+3. Agent queries RAG for context on "ROS 2 nodes" and "communication"
+4. Agent receives chapter excerpts from Module 1, Chapters 1-2
+5. Agent generates educational explanation with analogies
+6. Response includes:
+   - Clear explanation of nodes and communication mechanisms
+   - Real-world analogy (e.g., "like microservices")
+   - Citation: "Source: Module 1 - ROS 2 Fundamentals, Chapters 1-2"
+   - Agent name: "Concept Explainer Agent"
+7. Response appears within 3 seconds
+
+### Scenario 2: Coding Question (Code Helper Agent)
+
+**Given**: User asks "How do I create a publisher in rclpy?"  
+**When**: Query sent to chatbot  
+**Then**:
+1. Orchestrator classifies as "code assistance"
+2. Routes to Code Helper Agent
+3. Agent queries RAG for code examples on "rclpy publisher"
+4. Agent receives code snippet from Module 1, Chapter 3
+5. Agent generates response with:
+   - Complete working code example
+   - Explanation of each line
+   - Best practices note
+   - Source citation with specific chapter
+   - Agent name: "Code Helper Agent"
+
+### Scenario 3: Error/Troubleshooting (Troubleshooting Agent)
+
+**Given**: User asks "I'm getting 'node not found' error in ROS 2, how do I fix it?"  
+**When**: Query sent to chatbot  
+**Then**:
+1. Orchestrator classifies as "troubleshooting"
+2. Routes to Troubleshooting Agent
+3. Agent queries RAG for troubleshooting sections on "node errors"
+4. Agent generates systematic debugging steps
+5. Response includes:
+   - Diagnostic questions ("Did you source your workspace?")
+   - Step-by-step solutions
+   - Common causes
+   - Prevention tips
+   - Source citation
+   - Agent name: "Troubleshooting Agent"
+
+### Scenario 4: Agent Handoff (Optional Bonus)
+
+**Given**: User asks Concept Explainer "Can you show me code for that?"  
+**When**: Concept Agent recognizes code request  
+**Then**:
+1. Concept Agent delegates to Code Helper Agent
+2. Code Helper receives conversation context
+3. Code Helper generates code example
+4. Response indicates handoff: "I'm passing you to our Code Helper Agent..."
+
+---
+
+## Acceptance Tests (Updated)
+
+### Test Suite 1: Agent Orchestration
+
+**Test 1.1: Concept Query Routing**
+- Input: "Explain what URDF is"
+- Expected: 
+  - Routed to Concept Explainer Agent
+  - Response includes educational explanation
+  - Agent name in response: "Concept Explainer Agent"
+
+**Test 1.2: Code Query Routing**
+- Input: "Show me how to create a ROS 2 service"
+- Expected:
+  - Routed to Code Helper Agent
+  - Response includes code example
+  - Agent name: "Code Helper Agent"
+
+**Test 1.3: Troubleshooting Query Routing**
+- Input: "My Gazebo simulation crashes, help!"
+- Expected:
+  - Routed to Troubleshooting Agent
+  - Response includes diagnostic steps
+  - Agent name: "Troubleshooting Agent"
+
+**Test 1.4: Ambiguous Query Handling**
+- Input: "Tell me about nodes"
+- Expected:
+  - Orchestrator chooses most likely agent (Concept Explainer)
+  - Or asks clarifying question
+  - Response still helpful
+
+### Test Suite 2: RAG Integration with Agents
+
+**Test 2.1: Agent Uses RAG Context**
+- Input: "What is Isaac Sim?"
+- Expected:
+  - Agent queries Qdrant for "Isaac Sim" content
+  - Response includes information from retrieved chapters
+  - Cites specific chapter: "Module 3, Chapter 1"
+
+**Test 2.2: Agent Handles No RAG Results**
+- Input: "Explain quantum computing in robotics"
+- Expected:
+  - RAG returns no relevant results (score < 0.6)
+  - Agent responds: "This topic isn't covered in the current book"
+  - No hallucination
+
+**Test 2.3: Agent Prioritizes RAG Context**
+- Input: "What does the book say about SLAM?"
+- Expected:
+  - Agent focuses on book content, not general knowledge
+  - Cites specific chapters
+  - Answer grounded in RAG results
+
+---
+
+## API Response Format (Updated)
+
+```typescript
+interface ChatResponse {
+  answer: string;
+  sources: SourceReference[];
+  agent_used: string;  // "concept_explainer" | "code_helper" | "troubleshoot" | "learning_path"
+  agent_confidence: number;  // 0-1 score for routing confidence
+  context_relevance: number;  // Average relevance of RAG results
+  metadata: {
+    response_time_ms: number;
+    rag_time_ms: number;
+    agent_time_ms: number;
+  };
+}
+```
+
+---
+
+## Revision History
+
+| Version | Date       | Changes                                      | Author |
+|---------|------------|----------------------------------------------|--------|
+| 1.0.0   | 2024-12-06 | Initial specification                        | AI     |
+| 2.0.0   | 2024-12-06 | Multi-agent architecture with OpenAI SDK     | AI     |
+
+---
+
+## Sign-Off
+
+- [ ] Specification reviewed and approved
+- [ ] Multi-agent architecture validated
+- [ ] OpenAI Agents SDK integration confirmed
+- [ ] Backend structure updated (routes/, agents/, chatbot/, config/)
+- [ ] Ready for updated planning phase

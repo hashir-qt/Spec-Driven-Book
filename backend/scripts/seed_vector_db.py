@@ -11,7 +11,7 @@ import hashlib
 load_dotenv()
 
 # Constants
-DOCS_PATH = "../docs/docs"
+DOCS_PATH = "d:/All Projects/AI-Again/Spec-Driven-Book/docs/docs"
 CHUNK_SIZE = 500  # tokens
 QDRANT_COLLECTION_NAME = "book_chapters_en"
 
@@ -64,7 +64,19 @@ def seed_database():
         collection_name=QDRANT_COLLECTION_NAME,
         vectors_config=models.VectorParams(size=3072, distance=models.Distance.COSINE),
     )
-    print(f"Collection '{QDRANT_COLLECTION_NAME}' created.")
+    # Create a payload index for the 'score' field
+    qdrant_client.create_payload_index(
+        collection_name=QDRANT_COLLECTION_NAME,
+        field_name="score",
+        field_type="float",
+    )
+    # Create a text payload index for the 'content' field
+    qdrant_client.create_payload_index(
+        collection_name=QDRANT_COLLECTION_NAME,
+        field_name="content",
+        field_type="text",
+    )
+    print(f"Collection '{QDRANT_COLLECTION_NAME}' created and 'score' and 'content' indexes added.")
 
     markdown_files = find_markdown_files(DOCS_PATH)
     print(f"DEBUG: Markdown files found: {markdown_files}")
