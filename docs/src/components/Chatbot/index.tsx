@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { JSX } from 'react';
+import ChatWidget from './ChatWidget';
 
 export default function Chatbot(): JSX.Element {
   return (
     <div>
-      <h1>Chatbot</h1>
-      <p>This is the RAG chatbot.</p>
+      <h1><ChatWidget /></h1>
     </div>
   );
 }

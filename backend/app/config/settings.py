@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     AGENT_MAX_TOKENS: int = 800
        
     # CORS Settings
-    CORS_ORIGINS: list = ["http://localhost:8000"]
+    # CORS_ORIGINS: list = ["http://localhost:3000"]
        
     class Config:
         env_file = ".env"

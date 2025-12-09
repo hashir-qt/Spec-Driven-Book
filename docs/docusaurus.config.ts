@@ -18,7 +18,7 @@ const config: Config = {
   url: 'https://AI-Again.github.io',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: '/',
+  baseUrl: '/Spec-Driven-Book/',
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
@@ -82,7 +82,7 @@ const config: Config = {
       },
       items: [
         {
-          href: 'https://github.com/AI-Again/Spec-Driven-Book',
+          href: 'https://github.com/hashir-qt/Spec-Driven-Book',
           label: 'GitHub',
           position: 'right',
         },
