@@ -75,7 +75,15 @@ const ChatWidget: React.FC = () => {
             ))}
 
             {isLoading && (
-              <ChatMessage message="Thinking..." sender="assistant" />
+              <div className="message assistant-message">
+                <div className="message-content">
+                  <div className="typing-indicator">
+                    <div className="typing-dot"></div>
+                    <div className="typing-dot"></div>
+                    <div className="typing-dot"></div>
+                  </div>
+                </div>
+              </div>
             )}
 
             {error && <ChatMessage message={`Error: ${error}`} sender="assistant" />}

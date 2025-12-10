@@ -76,7 +76,20 @@ class ContextBuilder:
         if search_results:
             for i, result in enumerate(search_results):
                 file_name = os.path.basename(result.payload.get('file_path', 'unknown_file'))
-                chapter_id = result.payload.get('file_path', 'unknown').replace('../docs/docs/', '').replace('.md', '')
+                # Robustly extract relative path for chapter_id
+                file_path = result.payload.get('file_path', 'unknown_file')
+                # Normalize separators
+                file_path_norm = file_path.replace('\\', '/')
+                
+                if 'docs/docs/' in file_path_norm:
+                     # Extract part after docs/docs/
+                     chapter_id = file_path_norm.split('docs/docs/')[-1]
+                else:
+                     # Fallback to basename if structure matches unexpected pattern
+                     chapter_id = os.path.basename(file_path_norm)
+                
+                chapter_id = chapter_id.replace('.md', '')
+                
                 chapter_title = os.path.splitext(file_name)[0].replace('-', ' ').title() # Basic title formatting
                 
                 source_info = {

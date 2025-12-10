@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 
+import { FaPaperPlane } from 'react-icons/fa';
+
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
 }
@@ -24,8 +26,9 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage }) => {
         placeholder="Ask me anything about the book..."
         className="chat-input-field"
       />
-      <button type="submit" className="chat-send-button">
-        Send
+
+      <button type="submit" className="chat-send-button" disabled={!message.trim()}>
+        <FaPaperPlane />
       </button>
     </form>
   );

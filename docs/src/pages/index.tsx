@@ -11,18 +11,31 @@ import styles from './index.module.css';
 function HomepageHeader() {
   const { siteConfig } = useDocusaurusContext();
   return (
-    <header className={clsx('hero hero--primary', styles.heroBanner)}>
+    <header className={clsx('hero', styles.heroBanner)}>
       <div className="container">
-        <Heading as="h1" className="hero__title">
-          {siteConfig.title}
-        </Heading>
-        <p className="hero__subtitle">{siteConfig.tagline}</p>
-        <div className={styles.buttons}>
-          <Link
-            className="button button--secondary button--lg"
-            to="/docs/intro">
-            Start Learning Now
-          </Link>
+        <div className={styles.heroContent}>
+          <div className={styles.heroText}>
+            <Heading as="h1" className={clsx('hero__title', styles.slideUp)}>
+              {siteConfig.title}
+            </Heading>
+            <p className={clsx('hero__subtitle', styles.slideUp, styles.delay1)}>
+              {siteConfig.tagline}
+            </p>
+            <div className={clsx(styles.buttons, styles.slideUp, styles.delay2)}>
+              <Link
+                className="button button--primary button--lg"
+                to="/docs/intro">
+                Start Learning Now
+              </Link>
+            </div>
+          </div>
+          <div className={clsx(styles.heroImageContainer, styles.fadeIn)}>
+            <img
+              src="img/hero_robot.png"
+              alt="Futuristic Robot Reading"
+              className={styles.heroImage}
+            />
+          </div>
         </div>
       </div>
     </header>
