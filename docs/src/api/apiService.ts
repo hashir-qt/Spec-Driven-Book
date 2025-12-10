@@ -25,7 +25,7 @@ const sendMessage = async (message: string, context: string | null): Promise<Cha
   // Replace with your actual API endpoint and logic
   // Use environment variable or default to localhost:8000
   // Use environment variable or default to localhost:8000
-  const baseUrl = 'http://127.0.0.1:8000';
+  const baseUrl = 'https://spec-driven-book-bwl2.vercel.app/';
   const response = await fetch(`${baseUrl}/api/v1/chat`, {
     method: 'POST',
     headers: {
