@@ -38,10 +38,6 @@ def get_book_overview() -> str:
     - Human-robot interaction
     - Full-body motion planning
     
-    📚 **Module 5: Physical AI Integration**
-    - Bridging simulation to reality
-    - Sensor fusion and perception
-    - End-to-end learning for robotics
     """
 
 
