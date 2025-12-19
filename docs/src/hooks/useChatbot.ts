@@ -6,6 +6,7 @@ interface Message {
     sender: 'user' | 'assistant';
     agentName?: string;
     agentIcon?: React.ReactNode;
+    timestamp: Date;
 }
 
 interface UseChatbotReturn {
@@ -46,7 +47,7 @@ export const useChatbot = (): UseChatbotReturn => {
     }, []);
 
     const sendMessage = useCallback(async (message: string, isSelectedText: boolean = false) => {
-        setMessages((prev) => [...prev, { message, sender: 'user' }]);
+        setMessages((prev) => [...prev, { message, sender: 'user', timestamp: new Date() }]);
         setIsLoading(true);
         setError(null);
 
@@ -60,6 +61,7 @@ export const useChatbot = (): UseChatbotReturn => {
                     message: response.answer,
                     sender: 'assistant',
                     agentName: response.agent_used,
+                    timestamp: new Date()
                 },
             ]);
 
@@ -72,7 +74,7 @@ export const useChatbot = (): UseChatbotReturn => {
             setError(errorMessage);
             setMessages((prev) => [
                 ...prev,
-                { message: `Error: ${errorMessage}`, sender: 'assistant' },
+                { message: `Error: ${errorMessage}`, sender: 'assistant', timestamp: new Date() },
             ]);
         } finally {
             setIsLoading(false);

@@ -71,6 +71,7 @@ const ChatWidget: React.FC = () => {
                 sender={msg.sender}
                 agentName={msg.agentName}
                 agentIcon={msg.agentName ? (agentIcons[msg.agentName] || agentIcons['Default Agent']) : undefined}
+                timestamp={msg.timestamp}
               />
             ))}
 

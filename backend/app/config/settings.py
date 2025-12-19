@@ -10,7 +10,7 @@ class Settings(BaseSettings):
        
     # Gemini OpenAI-compatible endpoint
     GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-2.5-flash-lite"
        
     # JWT Settings
     JWT_SECRET_KEY: str
