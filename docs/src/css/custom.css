@@ -1,30 +1,97 @@
-/**
- * Any CSS included here will be global. The classic template
- * bundles Infima by default. Infima is a CSS framework designed to
- * work well for content-centric websites.
- */
+/* ═══════════════════════════════════════════════════════════
+   Global Theme — Premium Typography & Colors
+   ═══════════════════════════════════════════════════════════ */
 
-/* You can override the default Infima variables here. */
+/* Inter — premium UI font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
 :root {
-  --ifm-color-primary: #00A0DE;
-  --ifm-color-primary-dark: #0090C7;
-  --ifm-color-primary-darker: #0080B0;
-  --ifm-color-primary-darkest: #00608A;
-  --ifm-color-primary-light: #1AB0E8;
-  --ifm-color-primary-lighter: #32BEF2;
-  --ifm-color-primary-lightest: #4ED2FC;
+  /* Brand palette */
+  --ifm-color-primary: #06b6d4;
+  --ifm-color-primary-dark: #0891b2;
+  --ifm-color-primary-darker: #0e7490;
+  --ifm-color-primary-darkest: #155e75;
+  --ifm-color-primary-light: #22d3ee;
+  --ifm-color-primary-lighter: #67e8f9;
+  --ifm-color-primary-lightest: #a5f3fc;
+
+  /* Typography */
+  --ifm-font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --ifm-heading-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --ifm-font-size-base: 16px;
   --ifm-code-font-size: 95%;
+
+  /* Spacing & Radius */
+  --ifm-global-radius: 12px;
+
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
 }
 
-/* For readability concerns, you should choose a lighter palette in dark mode. */
 [data-theme='dark'] {
-  --ifm-color-primary: #32BEF2;
-  --ifm-color-primary-dark: #1AB0E8;
-  --ifm-color-primary-darker: #00A0DE;
-  --ifm-color-primary-darkest: #0080B0;
-  --ifm-color-primary-light: #4ED2FC;
-  --ifm-color-primary-lighter: #6ADCF6;
-  --ifm-color-primary-lightest: #86E6FF;
+  --ifm-color-primary: #22d3ee;
+  --ifm-color-primary-dark: #06b6d4;
+  --ifm-color-primary-darker: #0891b2;
+  --ifm-color-primary-darkest: #0e7490;
+  --ifm-color-primary-light: #67e8f9;
+  --ifm-color-primary-lighter: #a5f3fc;
+  --ifm-color-primary-lightest: #cffafe;
+  --ifm-background-color: #0a0a1a;
+  --ifm-background-surface-color: #0f0f23;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+/* ── Smooth global defaults ──────────────────────────────── */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* ── Navbar polish ───────────────────────────────────────── */
+.navbar {
+  backdrop-filter: blur(16px) saturate(180%);
+  background: rgba(5, 5, 16, 0.8) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: none !important;
+}
+
+.navbar__title {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.navbar__link {
+  font-weight: 500;
+}
+
+/* ── Footer polish ───────────────────────────────────────── */
+.footer--dark {
+  background: #030308 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* ── Remove default Docusaurus hero class styles ─────────── */
+.hero {
+  --ifm-hero-background-color: transparent;
+  --ifm-hero-text-color: inherit;
+  background: none;
+  padding: 0;
+}
+
+/* ── Scrollbar polish (Webkit) ───────────────────────────── */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0a1a;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
